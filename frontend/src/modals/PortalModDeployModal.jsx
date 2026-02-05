@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import Modal from '../components/Modal.jsx';
 import ItemUseBar from '../components/ItemUseBar.jsx';
+import { getInstalledModIcon } from '../utils/itemIcons.js';
 
 function levelClass(level) {
   if (level <= 3) return 'lvl-low';
@@ -8,7 +9,16 @@ function levelClass(level) {
   return 'lvl-high';
 }
 
-export default function PortalModDeployModal({ open, onClose, portal, items = [], playerName = 'Agent' }) {
+export default function PortalModDeployModal({
+  open,
+  onClose,
+  portal,
+  modSlots = [],
+  onUpdateSlots,
+  items = [],
+  playerName = 'Agent'
+}) {
+  const formatValue = (value) => (Number.isInteger(value) ? value : value.toFixed(2));
   const mods = useMemo(
     () => items.filter((item) => item.type === 'mod' && item.count > 0),
     [items]
@@ -17,15 +27,19 @@ export default function PortalModDeployModal({ open, onClose, portal, items = []
   const [selectedId, setSelectedId] = useState(sortedMods[0]?.id || null);
   const selected = sortedMods.find((item) => item.id === selectedId) || sortedMods[0];
 
-  const [slots, setSlots] = useState(() =>
-    Array.from({ length: 4 }, (_, idx) => ({
+  const resolvedSlots = Array.from({ length: 4 }, (_, idx) => {
+    const slot = modSlots[idx];
+    if (slot) {
+      return { id: idx, ...slot };
+    }
+    return {
       id: idx,
       type: null,
       owner: null,
       rarity: null,
       subtype: null
-    }))
-  );
+    };
+  });
 
   const [actionNotice, setActionNotice] = useState('');
   const [actionNoticeKey, setActionNoticeKey] = useState(0);
@@ -36,6 +50,8 @@ export default function PortalModDeployModal({ open, onClose, portal, items = []
   const name = portal?.name || 'Portal';
   const level = portal?.level ?? 1;
   const portalFaction = portal?.faction || 'RESISTANCE';
+  const portalFactionClass =
+    portalFaction === 'RESISTANCE' ? 'res' : portalFaction === 'ENLIGHTENED' ? 'enl' : 'neutral';
 
   const showNotice = (message) => {
     if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
@@ -48,75 +64,91 @@ export default function PortalModDeployModal({ open, onClose, portal, items = []
     }, 200);
   };
 
-  const playerModCount = slots.filter((slot) => slot.owner === playerName).length;
+  const playerModCount = resolvedSlots.filter((slot) => slot.owner === playerName).length;
   const nextEmptySlot = (current) => {
     for (let i = 1; i <= 4; i += 1) {
       const next = (current + i) % 4;
-      if (!slots[next].type) return next;
+      if (!resolvedSlots[next].type) return next;
     }
     return current;
   };
 
+  const canInstall = portal?.faction && portal?.faction !== 'NEUTRAL' && portalFaction === 'RESISTANCE';
+
   const handleInstall = () => {
+    if (!canInstall) {
+      showNotice('先占领');
+      return;
+    }
     if (!selected) return;
-    if (slots[selectedSlot].type) {
+    if (resolvedSlots[selectedSlot].type) {
       showNotice('slot occupied');
       return;
     }
-    if (playerModCount >= 2 && slots[selectedSlot].owner !== playerName) {
+    if (playerModCount >= 2 && resolvedSlots[selectedSlot].owner !== playerName) {
       showNotice('mod limit reached');
       return;
     }
-    setSlots((prev) =>
-      prev.map((slot, idx) =>
-        idx === selectedSlot
-          ? {
-              ...slot,
-              type: selected.name,
-              owner: playerName,
-              rarity: selected.rarity || 'C',
-              subtype: selected.subtype || 'SHIELD'
-            }
-          : slot
-      )
-    );
+    const nextSlots = resolvedSlots.map((slot, idx) => {
+      if (idx === selectedSlot) {
+        return {
+          ...slot,
+          type: selected.name,
+          owner: playerName,
+          rarity: selected.rarity || 'C',
+          subtype: selected.subtype || 'SHIELD'
+        };
+      }
+      return slot?.subtype ? slot : null;
+    });
+    onUpdateSlots?.(portal?.id, nextSlots);
     setSelectedSlot(nextEmptySlot(selectedSlot));
   };
 
   const modEffect = (mod) => {
-    if (!mod) return null;
+    if (!mod) return [];
     const rarity = mod.rarity || 'C';
-    const rarityValue = { C: 10, R: 15, VR: 20 };
+    const shieldValues = { C: 30, R: 40, VR: 60, AXA: 70 };
+    const multiValues = { C: 4, R: 8, VR: 12 };
     switch (mod.subtype) {
       case 'SHIELD':
-        return { label: 'Shielding', value: rarityValue[rarity] || 0 };
+        return [{ label: 'Shielding', value: shieldValues[rarity] || 0 }];
       case 'LINK':
-        return { label: 'Link Range', value: rarity === 'VR' ? 7 : 2 };
+        return [{ label: 'Link Range', value: rarity === 'VR' ? 7 : 2 }];
+      case 'SBUL':
+        return [{ label: 'Link Range', value: 5 }];
       case 'FORCE':
-        return { label: 'Force Amp', value: rarity === 'VR' ? 30 : rarity === 'R' ? 25 : 20 };
+        return [{ label: 'Force Amp', value: 2.0 }];
       case 'TURRET':
-        return { label: 'Turret', value: rarity === 'VR' ? 30 : rarity === 'R' ? 20 : 10 };
+        return [
+          { label: 'Turret Rate', value: 2.0 },
+          { label: 'Turret Crit', value: 30 }
+        ];
       case 'HEATSINK':
-        return { label: 'Cooldown', value: rarity === 'VR' ? -70 : rarity === 'R' ? -50 : -20 };
+        return [{ label: 'Cooldown', value: rarity === 'VR' ? -70 : rarity === 'R' ? -50 : -20 }];
       case 'MULTI':
-        return { label: 'XM Spin', value: rarity === 'VR' ? 8 : rarity === 'R' ? 6 : 4 };
+        return [{ label: 'XM Spin', value: multiValues[rarity] || 0 }];
       default:
-        return null;
+        return [];
     }
   };
 
-  const installedEffects = slots
-    .map((slot) => (slot.subtype ? modEffect(slot) : null))
+  const installedEffects = resolvedSlots
+    .flatMap((slot) => (slot.subtype ? modEffect(slot) : []))
     .filter(Boolean)
     .reduce((acc, effect) => {
       acc[effect.label] = (acc[effect.label] || 0) + effect.value;
       return acc;
     }, {});
 
-  const selectedEffect = modEffect(selected);
+  const selectedEffects = (modEffect(selected) || []).filter(Boolean);
+  const selectedEffectsMap = selectedEffects.reduce((acc, effect) => {
+    acc[effect.label] = (acc[effect.label] || 0) + effect.value;
+    return acc;
+  }, {});
 
   return (
-    <Modal open={open} onClose={onClose} className="portal-deploy-card">
+    <Modal open={open} onClose={onClose} className="portal-deploy-card portal-mod-card">
       <header className="modal-header portal-header">
         <div className="portal-deploy-box">
           <div className="portal-deploy-title">
@@ -124,45 +156,51 @@ export default function PortalModDeployModal({ open, onClose, portal, items = []
             <span className="portal-deploy-name">{name}</span>
           </div>
           {Object.entries(installedEffects).map(([label, value]) => {
-            const isSame = selectedEffect && selectedEffect.label === label;
+            const delta = selectedEffectsMap[label];
+            const deltaText =
+              delta != null
+                ? ` [${delta >= 0 ? '+' : ''}${formatValue(delta)}]`
+                : '';
             return (
               <div key={label} className="portal-deploy-line">
                 <span>{label}</span>
                 <span className="portal-deploy-delta">
-                  {value}
-                  {isSame ? ` [+${Math.abs(selectedEffect.value)}]` : ''}
+                  {formatValue(value)}
+                  {deltaText}
                 </span>
               </div>
             );
           })}
-          {selectedEffect && !installedEffects[selectedEffect.label] ? (
-            <div className="portal-deploy-line">
-              <span>{selectedEffect.label}</span>
-              <span className="portal-deploy-delta">[+{Math.abs(selectedEffect.value)}]</span>
-            </div>
-          ) : null}
+          {selectedEffects
+            .filter((effect) => installedEffects[effect.label] == null)
+            .map((effect) => (
+              <div key={effect.label} className="portal-deploy-line">
+                <span>{effect.label}</span>
+                <span className="portal-deploy-delta">
+                  [{effect.value >= 0 ? '+' : ''}{formatValue(effect.value)}]
+                </span>
+              </div>
+            ))}
         </div>
       </header>
 
       <div className="portal-mod-body">
         <div className="mod-slot-grid">
-          {slots.map((slot, idx) => (
+          {resolvedSlots.map((slot, idx) => (
             <div key={slot.id} className={`mod-slot-wrap ${idx < 2 ? 'top' : 'bottom'}`}>
               <span className={`mod-slot-label ${idx < 2 ? 'top' : 'bottom'}`}>
                 {idx + 1}{' '}
-                <span className={portalFaction === 'RESISTANCE' ? 'res' : 'enl'}>
-                  {playerName}
-                </span>
+                <span className={portalFactionClass}>{playerName}</span>
               </span>
               <button
                 className={`mod-slot-cell ${selectedSlot === idx ? 'active' : ''}`}
                 onClick={() => setSelectedSlot(idx)}
               >
-                {slot.type ? (
-                  <span className={`rarity ${slot.rarity || 'C'}`}>///</span>
-                ) : (
-                  <span className="mod-slot-empty" />
-                )}
+                <img
+                  className="mod-slot-installed-icon"
+                  src={getInstalledModIcon(slot)}
+                  alt={slot?.type || 'empty'}
+                />
               </button>
             </div>
           ))}
@@ -181,6 +219,8 @@ export default function PortalModDeployModal({ open, onClose, portal, items = []
         actionClassName={actionError ? 'error' : ''}
         itemMode="rarity"
         footerText={selected ? `Install Mod: ${selected.name}` : 'Install Mod'}
+        actionDisabled={!canInstall}
+        actionDisabledText="先占领"
       />
     </Modal>
   );

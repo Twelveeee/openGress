@@ -155,8 +155,8 @@ body {
 
 .portal {
   position: absolute;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -178,6 +178,105 @@ body {
   position: relative;
 }
 
+.portal-level-text {
+  position: relative;
+  z-index: 2;
+}
+
+.portal-reso-ring {
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.portal-res-slot {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(0, 0, 0, 0.8);
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+.portal-res-slot.on {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.75);
+}
+
+.portal-res-slot.pos-n { top: -2px; left: 50%; transform: translateX(-50%); }
+.portal-res-slot.pos-ne { top: 4px; right: 4px; }
+.portal-res-slot.pos-e { top: 50%; right: -2px; transform: translateY(-50%); }
+.portal-res-slot.pos-se { bottom: 4px; right: 4px; }
+.portal-res-slot.pos-s { bottom: -2px; left: 50%; transform: translateX(-50%); }
+.portal-res-slot.pos-sw { bottom: 4px; left: 4px; }
+.portal-res-slot.pos-w { top: 50%; left: -2px; transform: translateY(-50%); }
+.portal-res-slot.pos-nw { top: 4px; left: 4px; }
+
+.portal-mod-rings {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.portal-mod-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
+}
+
+.portal-mod-ring.slot-0 { width: 50px; height: 50px; }
+.portal-mod-ring.slot-1 { width: 60px; height: 60px; }
+.portal-mod-ring.slot-2 { width: 70px; height: 70px; }
+.portal-mod-ring.slot-3 { width: 80px; height: 80px; }
+
+.portal-mod-ring.rarity-C {
+  border-color: rgba(116, 255, 160, 0.75);
+  background: rgba(116, 255, 160, 0.2);
+  box-shadow: 0 0 8px rgba(116, 255, 160, 0.4);
+}
+
+.portal-mod-ring.rarity-R {
+  border-color: rgba(179, 136, 255, 0.75);
+  background: rgba(179, 136, 255, 0.2);
+  box-shadow: 0 0 8px rgba(179, 136, 255, 0.4);
+}
+
+.portal-mod-ring.rarity-VR,
+.portal-mod-ring.rarity-AXA {
+  border-color: rgba(255, 122, 200, 0.75);
+  background: rgba(255, 122, 200, 0.2);
+  box-shadow: 0 0 8px rgba(255, 122, 200, 0.4);
+}
+
+.portal.portal-lvl-low {
+  transform: scale(0.92);
+}
+
+.portal.portal-lvl-mid {
+  transform: scale(1.0);
+}
+
+.portal.portal-lvl-high {
+  transform: scale(1.08);
+}
+
+.portal.portal-lvl-high::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
+}
+
 .portal.res {
   border-color: rgba(10, 32, 60, 0.85);
   background: rgba(58, 160, 255, 0.3);
@@ -197,9 +296,9 @@ body {
 }
 
 .portal.neutral {
-  border-color: rgba(20, 24, 32, 0.85);
-  background: rgba(159, 176, 199, 0.3);
-  box-shadow: 0 0 8px rgba(159, 176, 199, 0.25);
+  border-color: rgba(94, 52, 14, 0.85);
+  background: rgba(255, 175, 96, 0.28);
+  box-shadow: 0 0 8px rgba(255, 175, 96, 0.25);
 }
 
 .player-marker,
@@ -512,15 +611,22 @@ body {
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  border: 1px solid rgba(120, 150, 190, 0.35);
-  background: rgba(8, 14, 20, 0.9);
+  border: none;
+  background: transparent;
   color: rgba(210, 230, 255, 0.85);
   font-size: 18px;
+  display: grid;
+  place-items: center;
 }
 
 .mod-slot.empty {
-  border-style: dashed;
   color: var(--muted);
+}
+
+.mod-slot-icon {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
 }
 
 .portal-core-area {
@@ -714,6 +820,12 @@ body {
   background: rgba(10, 16, 26, 0.9);
 }
 
+.portal-mod-card .portal-deploy-box {
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
 .portal-deploy-title {
   display: flex;
   align-items: baseline;
@@ -834,6 +946,7 @@ body {
 
 .deploy-core {
   position: relative;
+  width: 200px;
   height: 200px;
   display: grid;
   place-items: center;
@@ -900,21 +1013,10 @@ body {
   border: 1px dashed rgba(255, 255, 255, 0.35);
 }
 
-.mod-slot-icon {
-  font-weight: 700;
-  letter-spacing: 1px;
-}
-
-.mod-slot-icon.C {
-  color: #8be78b;
-}
-
-.mod-slot-icon.R {
-  color: #b388ff;
-}
-
-.mod-slot-icon.VR {
-  color: #ff7ac8;
+.mod-slot-installed-icon {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
 }
 
 .neutral {
@@ -1177,6 +1279,14 @@ body {
   color: #8be78b;
 }
 
+.rarity.AXA {
+  color: #f6c356;
+}
+
+.rarity.SBUL {
+  color: #6fd1ff;
+}
+
 .res-bars {
   display: inline-flex;
   gap: 8px;
@@ -1318,6 +1428,33 @@ body {
   flex: 1;
 }
 
+.inventory-item {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+}
+
+.inventory-item-info {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.inventory-icon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.inventory-icon.placeholder {
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(120, 160, 255, 0.55), rgba(60, 90, 200, 0.2));
+  box-shadow: 0 0 8px rgba(120, 160, 255, 0.25);
+}
+
 .manage-actions {
   display: flex;
   gap: 8px;
@@ -1423,6 +1560,12 @@ body {
   letter-spacing: 2px;
 }
 
+.item-use-action.disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow: none;
+}
+
 .item-use-action.charging {
   box-shadow: 0 0 12px rgba(226, 58, 111, 0.7);
 }
@@ -1498,11 +1641,24 @@ body {
 }
 
 .item-use-sprite {
-  width: 70px;
-  height: 42px;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
   background: linear-gradient(135deg, rgba(120, 160, 255, 0.9), rgba(60, 90, 200, 0.4));
-  clip-path: polygon(0 100%, 20% 0, 50% 40%, 80% 0, 100% 100%, 50% 75%);
   box-shadow: 0 0 10px rgba(120, 160, 255, 0.35);
+  display: grid;
+  place-items: center;
+}
+
+.item-use-sprite.has-icon {
+  background: transparent;
+  box-shadow: none;
+}
+
+.item-use-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .item-use-meta {

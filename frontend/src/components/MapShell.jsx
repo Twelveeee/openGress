@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import gameData from '../mock/game-data.json';
 
 const OSM_CENTER = [39.908722, 116.397499];
 
@@ -21,8 +20,9 @@ function loadLeaflet() {
   });
 }
 
-export default function MapShell({ onOpenPortal }) {
+export default function MapShell({ portals = [], links = [], fields = [], onOpenPortal }) {
   const mapRef = useRef(null);
+  const leafletRef = useRef(null);
   const containerRef = useRef(null);
   const overlayRef = useRef({
     portals: null,
@@ -34,6 +34,7 @@ export default function MapShell({ onOpenPortal }) {
   });
   const animRef = useRef({ raf: null, bearing: 0 });
   const [mapError, setMapError] = useState('');
+  const [mapReady, setMapReady] = useState(false);
   const [playerPos, setPlayerPos] = useState(OSM_CENTER);
 
   useEffect(() => {
@@ -42,6 +43,7 @@ export default function MapShell({ onOpenPortal }) {
     loadLeaflet()
       .then((L) => {
         if (!isMounted || mapRef.current) return;
+        leafletRef.current = L;
         mapRef.current = L.map(containerRef.current, {
           center: OSM_CENTER,
           zoom: 16,
@@ -52,52 +54,9 @@ export default function MapShell({ onOpenPortal }) {
           attribution: '&copy; OpenStreetMap contributors'
         }).addTo(mapRef.current);
 
-        const portals = gameData.portals || [];
-        const links = gameData.links || [];
-        const fields = gameData.fields || [];
-
         const fieldLayer = L.layerGroup().addTo(mapRef.current);
-        fields.forEach((field) => {
-          const points = (field.points || []).map((pt) => [pt.lat, pt.lng]);
-          const style = styleForFaction(field.faction);
-          if (points.length >= 3) {
-            L.polygon(points, {
-              color: style.stroke,
-              weight: 2,
-              fillColor: style.fill,
-              fillOpacity: 0.18
-            }).addTo(fieldLayer);
-          }
-        });
-
         const linkLayer = L.layerGroup().addTo(mapRef.current);
-        links.forEach((link) => {
-          const style = styleForFaction(link.faction);
-          L.polyline(
-            [
-              [link.from.lat, link.from.lng],
-              [link.to.lat, link.to.lng]
-            ],
-            {
-              color: style.stroke,
-              weight: 2,
-              opacity: 0.9
-            }
-          ).addTo(linkLayer);
-        });
-
         const portalLayer = L.layerGroup().addTo(mapRef.current);
-        portals.forEach((portal) => {
-          const factionClass = factionToClass(portal.faction);
-          const icon = L.divIcon({
-            className: 'portal-marker',
-            html: `<div class=\"portal ${factionClass}\">L${portal.level || 0}</div>`,
-            iconSize: [46, 46],
-            iconAnchor: [23, 23]
-          });
-          const marker = L.marker([portal.lat, portal.lng], { icon }).addTo(portalLayer);
-          marker.on('click', () => onOpenPortal(portal));
-        });
 
         const playerIcon = L.divIcon({
           className: 'player-marker',
@@ -208,6 +167,7 @@ export default function MapShell({ onOpenPortal }) {
           path: null,
           arrow: playerArrow
         };
+        setMapReady(true);
       })
       .catch((err) => {
         if (isMounted) {
@@ -234,6 +194,59 @@ export default function MapShell({ onOpenPortal }) {
       }
     };
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const L = leafletRef.current;
+    const overlays = overlayRef.current;
+    if (!mapReady || !map || !L || !overlays.portals || !overlays.links || !overlays.fields) return;
+
+    overlays.fields.clearLayers();
+    fields.forEach((field) => {
+      const points = (field.points || []).map((pt) => [pt.lat, pt.lng]);
+      const style = styleForFaction(field.faction);
+      if (points.length >= 3) {
+        L.polygon(points, {
+          color: style.stroke,
+          weight: 2,
+          fillColor: style.fill,
+          fillOpacity: 0.18
+        }).addTo(overlays.fields);
+      }
+    });
+
+    overlays.links.clearLayers();
+    links.forEach((link) => {
+      const style = styleForFaction(link.faction);
+      L.polyline(
+        [
+          [link.from.lat, link.from.lng],
+          [link.to.lat, link.to.lng]
+        ],
+        {
+          color: style.stroke,
+          weight: 2,
+          opacity: 0.9
+        }
+      ).addTo(overlays.links);
+    });
+
+    overlays.portals.clearLayers();
+    portals.forEach((portal) => {
+      const factionClass = factionToClass(portal.faction);
+      const levelClass = portalLevelClass(portal.level || 1);
+      const ring = buildResonatorRing(portal.resonators || []);
+      const modRings = buildModRings(portal.mods || []);
+      const icon = L.divIcon({
+        className: 'portal-marker',
+        html: `<div class=\"portal ${factionClass} ${levelClass}\"><span class=\"portal-level-text\">L${portal.level || 1}</span>${ring}${modRings}</div>`,
+        iconSize: [54, 54],
+        iconAnchor: [27, 27]
+      });
+      const marker = L.marker([portal.lat, portal.lng], { icon }).addTo(overlays.portals);
+      marker.on('click', () => onOpenPortal(portal));
+    });
+  }, [fields, links, mapReady, onOpenPortal, portals]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -266,6 +279,33 @@ export default function MapShell({ onOpenPortal }) {
       {mapError ? <div className="map-error">{mapError}</div> : null}
     </section>
   );
+}
+
+function portalLevelClass(level) {
+  if (level <= 3) return 'portal-lvl-low';
+  if (level <= 6) return 'portal-lvl-mid';
+  return 'portal-lvl-high';
+}
+
+function buildResonatorRing(resonators = []) {
+  const posByIndex = ['nw', 'w', 'sw', 's', 'se', 'e', 'ne', 'n'];
+  const slots = Array.from({ length: 8 }, (_, idx) => {
+    const hasRes = Boolean(resonators[idx]?.level);
+    if (!hasRes) return '';
+    return `<span class="portal-res-slot on pos-${posByIndex[idx] || idx}"></span>`;
+  }).join('');
+  return `<span class="portal-reso-ring">${slots}</span>`;
+}
+
+function buildModRings(mods = []) {
+  const rings = mods
+    .map((mod, idx) => {
+      if (!mod?.subtype) return '';
+      const rarity = mod.rarity || 'C';
+      return `<span class="portal-mod-ring slot-${idx} rarity-${rarity}"></span>`;
+    })
+    .join('');
+  return `<span class="portal-mod-rings">${rings}</span>`;
 }
 
 function styleForFaction(faction) {

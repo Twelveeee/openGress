@@ -21,7 +21,15 @@ function factionClass(faction) {
   }
 }
 
-export default function PortalDeployModal({ open, onClose, portal, items = [], playerName = 'Agent' }) {
+export default function PortalDeployModal({
+  open,
+  onClose,
+  portal,
+  slots = [],
+  onUpdateSlots,
+  items = [],
+  playerName = 'Agent'
+}) {
   const resonators = useMemo(
     () => items.filter((item) => item.type === 'resonator' && item.count > 0),
     [items]
@@ -34,29 +42,33 @@ export default function PortalDeployModal({ open, onClose, portal, items = [], p
   const [actionError, setActionError] = useState(false);
   const noticeTimerRef = useRef(null);
 
-  const [slots, setSlots] = useState(() =>
-    Array.from({ length: 8 }, (_, idx) => ({
+  const resolvedSlots = Array.from({ length: 8 }, (_, idx) => {
+    const slot = slots[idx];
+    if (slot) {
+      return { id: idx, ...slot };
+    }
+    return {
       id: idx,
       level: null,
       owner: null,
       faction: null,
       xm: 0
-    }))
-  );
+    };
+  });
   const [slotFx, setSlotFx] = useState({});
 
   const name = portal?.name || 'Portal';
   const portalFaction = portal?.faction || 'RESISTANCE';
 
-  const rangeByLevel = {
-    1: 160,
-    2: 810,
-    3: 6250,
-    4: 24000,
-    5: 40900,
-    6: 81400,
-    7: 110300,
-    8: 160100
+  const xmByLevel = {
+    1: 1000,
+    2: 1500,
+    3: 2000,
+    4: 2500,
+    5: 3000,
+    6: 4000,
+    7: 5000,
+    8: 6000
   };
 
   const computeStats = (nextSlots) => {
@@ -66,20 +78,23 @@ export default function PortalDeployModal({ open, onClose, portal, items = [], p
     }
     const avg = total / 8;
     const level = Math.max(1, Math.floor(avg));
-    const range = rangeByLevel[level] || 0;
-    const energyMax = total * 1000;
+    const range = avg > 0 ? 160 * Math.pow(avg, 4) : 0;
+    const energyMax = nextSlots.reduce(
+      (sum, slot) => sum + (xmByLevel[slot.level] || 0),
+      0
+    );
     const energy = Math.floor(energyMax * 0.7);
     return { level, range, energy, energyMax };
   };
 
-  const currentStats = computeStats(slots);
+  const currentStats = computeStats(resolvedSlots);
 
   const order = [0, 1, 2, 3, 4, 5, 6, 7];
   const nextEmptySlot = (current) => {
     const startIdx = order.indexOf(current);
     for (let i = 1; i <= order.length; i += 1) {
       const nextId = order[(startIdx + i) % order.length];
-      if (!slots[nextId].level) return nextId;
+      if (!resolvedSlots[nextId]?.level) return nextId;
     }
     return current;
   };
@@ -95,7 +110,7 @@ export default function PortalDeployModal({ open, onClose, portal, items = [], p
     1: 8
   };
 
-  const countsByLevel = slots.reduce((acc, slot) => {
+  const countsByLevel = resolvedSlots.reduce((acc, slot) => {
     if (slot.owner !== playerName || !slot.level) return acc;
     acc[slot.level] = (acc[slot.level] || 0) + 1;
     return acc;
@@ -104,7 +119,7 @@ export default function PortalDeployModal({ open, onClose, portal, items = [], p
   const canUseLevel = (level, slotId) => {
     const limit = limitsByLevel[level] ?? 0;
     const current = countsByLevel[level] || 0;
-    const slot = slots[slotId];
+    const slot = resolvedSlots[slotId];
     if (slot && slot.owner === playerName && slot.level === level) return true;
     if (slot && slot.owner === playerName && slot.level) {
       const adjusted = level === slot.level ? current : current;
@@ -123,7 +138,7 @@ export default function PortalDeployModal({ open, onClose, portal, items = [], p
 
   const withSelected = (() => {
     if (!selected) return currentStats;
-    const nextSlots = slots.map((slot, idx) =>
+    const nextSlots = resolvedSlots.map((slot, idx) =>
       idx === selectedSlot ? { ...slot, level: selected.level, owner: playerName } : slot
     );
     return computeStats(nextSlots);
@@ -132,7 +147,7 @@ export default function PortalDeployModal({ open, onClose, portal, items = [], p
   const deltaLevel = withSelected.level - currentStats.level;
   const deltaRange = withSelected.range - currentStats.range;
 
-  const actionLabel = slots[selectedSlot]?.level ? 'UPGRADE' : 'DEPLOY';
+  const actionLabel = resolvedSlots[selectedSlot]?.level ? 'UPGRADE' : 'DEPLOY';
 
   const preferredId = useMemo(() => {
     if (!allResonators.length) return null;
@@ -172,7 +187,7 @@ export default function PortalDeployModal({ open, onClose, portal, items = [], p
 
   const handleDeploy = () => {
     if (!selected) return;
-    const slot = slots[selectedSlot];
+    const slot = resolvedSlots[selectedSlot];
     if (slot.level && (selected.level || 0) <= slot.level) {
       showNotice('not an upgrade');
       return;
@@ -186,7 +201,7 @@ export default function PortalDeployModal({ open, onClose, portal, items = [], p
       showNotice('level limit reached');
       return;
     }
-    const wasOccupied = Boolean(slots[selectedSlot]?.level);
+    const wasOccupied = Boolean(resolvedSlots[selectedSlot]?.level);
     setLastSelectedLevel(selected.level || null);
     const level = selected.level || 0;
     const limitCount = limitsByLevel[level] ?? 0;
@@ -200,19 +215,18 @@ export default function PortalDeployModal({ open, onClose, portal, items = [], p
       .filter((val) => val > 0)
       .sort((a, b) => b - a);
     const nextLowerLevel = levelsDesc.find((val) => val < level) || level;
-    setSlots((prev) =>
-      prev.map((slot, idx) =>
-        idx === selectedSlot
-          ? {
-              ...slot,
-              level: selected.level,
-              owner: playerName,
-              faction: portalFaction,
-              xm: 100
-            }
-          : slot
-      )
+    const nextSlots = resolvedSlots.map((slot, idx) =>
+      idx === selectedSlot
+        ? {
+            ...slot,
+            level: selected.level,
+            owner: playerName,
+            faction: portalFaction,
+            xm: 100
+          }
+        : slot
     );
+    onUpdateSlots?.(portal?.id, nextSlots);
     setSlotFx((prev) => ({ ...prev, [selectedSlot]: wasOccupied ? 'upgrade' : 'deploy' }));
     setTimeout(() => {
       setSlotFx((prev) => {
@@ -258,7 +272,7 @@ export default function PortalDeployModal({ open, onClose, portal, items = [], p
 
       <div className="portal-deploy-body">
         <div className="deploy-side left">
-          {slots.slice(0, 4).map((slot) => (
+          {resolvedSlots.slice(0, 4).map((slot) => (
             <button
               key={slot.id}
               className={`deploy-slot left ${selectedSlot === slot.id ? 'active' : ''} ${
@@ -267,7 +281,7 @@ export default function PortalDeployModal({ open, onClose, portal, items = [], p
               onClick={() => setSelectedSlot(slot.id)}
             >
               <div
-                className={`res-xm ${factionClass(slot.faction)} ${
+                className={`res-xm ${factionClass(slot.faction || portalFaction || 'NEUTRAL')} ${
                   selectedSlot === slot.id ? 'active' : ''
                 }`}
               >
@@ -282,7 +296,7 @@ export default function PortalDeployModal({ open, onClose, portal, items = [], p
                 ) : (
                   <span className="res-level">—</span>
                 )}
-                <span className={`res-owner ${factionClass(slot.faction)}`}>
+                <span className={`res-owner ${factionClass(slot.faction || portalFaction || 'NEUTRAL')}`}>
                   {slot.owner || ''}
                 </span>
               </div>
@@ -294,7 +308,7 @@ export default function PortalDeployModal({ open, onClose, portal, items = [], p
           <div className="portal-node" />
         </div>
         <div className="deploy-side right">
-          {slots.slice(4).map((slot) => (
+          {resolvedSlots.slice(4).map((slot) => (
             <button
               key={slot.id}
               className={`deploy-slot right ${selectedSlot === slot.id ? 'active' : ''} ${
@@ -308,12 +322,12 @@ export default function PortalDeployModal({ open, onClose, portal, items = [], p
                 ) : (
                   <span className="res-level">—</span>
                 )}
-                <span className={`res-owner ${factionClass(slot.faction)}`}>
+                <span className={`res-owner ${factionClass(slot.faction || portalFaction || 'NEUTRAL')}`}>
                   {slot.owner || ''}
                 </span>
               </div>
               <div
-                className={`res-xm ${factionClass(slot.faction)} ${
+                className={`res-xm ${factionClass(slot.faction || portalFaction || 'NEUTRAL')} ${
                   selectedSlot === slot.id ? 'active' : ''
                 }`}
               >

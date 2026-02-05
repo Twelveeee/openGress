@@ -1,5 +1,6 @@
 import React from 'react';
 import Modal from '../components/Modal.jsx';
+import { getInstalledModIcon } from '../utils/itemIcons.js';
 
 function factionLabel(faction) {
   switch (faction) {
@@ -35,26 +36,15 @@ function levelClass(level) {
 
 export default function PortalModal({ open, onClose, portal, onDeploy, onModDeploy }) {
   const name = portal?.name || 'Arcoiris';
-  const level = portal?.level ?? 7;
+  const level = portal?.level ?? 1;
   const faction = portal?.faction || 'RESISTANCE';
   const image = portal?.image || '';
-  const owner = portal?.owner || 'catislife';
+  const owner = portal?.owner || '';
   const distance = portal?.distance ?? 13900;
   const description =
     portal?.description ||
     'This was meant to be a rainbow, but the installation of Arcoiris, there is a...';
-  const resonators =
-    portal?.resonators ||
-    [
-      { level: 1, owner: 'GPC2C', xm: 100, faction: 'RESISTANCE' },
-      { level: 2, owner: 'miester', xm: 92, faction: 'ENLIGHTENED' },
-      { level: 3, owner: 'RogerDodg.', xm: 84, faction: 'RESISTANCE' },
-      { level: 4, owner: 'speakerTo...', xm: 76, faction: 'ENLIGHTENED' },
-      { level: 5, owner: 'XderIon', xm: 68, faction: 'RESISTANCE' },
-      { level: 6, owner: 'ParrotCay', xm: 60, faction: 'ENLIGHTENED' },
-      { level: 7, owner: 'RogerDodg.', xm: 52, faction: 'RESISTANCE' },
-      { level: 8, owner: 'catislife', xm: 100, faction: 'ENLIGHTENED' }
-    ];
+  const resonators = portal?.resonators || Array.from({ length: 8 }, () => null);
   const leftRes = resonators.slice(0, 4);
   const rightRes = resonators.slice(4);
   const ownerClass = factionClass(faction);
@@ -88,27 +78,40 @@ export default function PortalModal({ open, onClose, portal, onDeploy, onModDepl
           style={image ? { backgroundImage: `url(${image})` } : undefined}
         />
         <div className="mod-grid">
-          <button className="mod-slot" onClick={onModDeploy}>⌁</button>
-          <button className="mod-slot" onClick={onModDeploy}>⌁</button>
-          <button className="mod-slot" onClick={onModDeploy}>⌁</button>
-          <button className="mod-slot empty" onClick={onModDeploy}>+</button>
+          {(portal?.mods || Array.from({ length: 4 }, () => null)).map((slot, idx) => (
+            <button
+              key={idx}
+              className={`mod-slot ${slot?.subtype ? '' : 'empty'}`}
+              onClick={onModDeploy}
+            >
+              <img
+                className="mod-slot-icon"
+                src={getInstalledModIcon(slot)}
+                alt={slot?.type || 'empty'}
+              />
+            </button>
+          ))}
         </div>
         </div>
       </header>
       <div className="portal-core-area">
         <div className="res-column left">
           {leftRes.map((res, idx) => (
-            <div key={`${res.owner}-${idx}`} className="res-row left">
-              <div className={`res-xm ${factionClass(res.faction || faction)}`}>
+            <div key={`${res?.owner || 'empty'}-${idx}`} className="res-row left">
+              <div className={`res-xm ${factionClass(res?.faction || faction)}`}>
                 <span className="res-bar">
-                  <span className="res-bar-fill" style={{ height: `${res.xm ?? 100}%` }} />
-                  {(res.xm ?? 100) >= 100 ? <span className="res-bar-cap" /> : null}
+                  <span className="res-bar-fill" style={{ height: `${res?.xm ?? 0}%` }} />
+                  {(res?.xm ?? 0) >= 100 ? <span className="res-bar-cap" /> : null}
                 </span>
               </div>
               <div className="res-text">
-                <span className={`res-level ${levelClass(res.level)}`}>L{res.level}</span>
-                <span className={`res-owner ${factionClass(res.faction || faction)}`}>
-                  {res.owner}
+                {res?.level ? (
+                  <span className={`res-level ${levelClass(res.level)}`}>L{res.level}</span>
+                ) : (
+                  <span className="res-level">—</span>
+                )}
+                <span className={`res-owner ${factionClass(res?.faction || faction)}`}>
+                  {res?.owner || ''}
                 </span>
               </div>
             </div>
@@ -120,17 +123,21 @@ export default function PortalModal({ open, onClose, portal, onDeploy, onModDepl
         </div>
         <div className="res-column right">
           {rightRes.map((res, idx) => (
-            <div key={`${res.owner}-${idx}`} className="res-row right">
+            <div key={`${res?.owner || 'empty'}-${idx}`} className="res-row right">
               <div className="res-text">
-                <span className={`res-level ${levelClass(res.level)}`}>L{res.level}</span>
-                <span className={`res-owner ${factionClass(res.faction || faction)}`}>
-                  {res.owner}
+                {res?.level ? (
+                  <span className={`res-level ${levelClass(res.level)}`}>L{res.level}</span>
+                ) : (
+                  <span className="res-level">—</span>
+                )}
+                <span className={`res-owner ${factionClass(res?.faction || faction)}`}>
+                  {res?.owner || ''}
                 </span>
               </div>
-              <div className={`res-xm ${factionClass(res.faction || faction)}`}>
+              <div className={`res-xm ${factionClass(res?.faction || faction)}`}>
                 <span className="res-bar">
-                  <span className="res-bar-fill" style={{ height: `${res.xm ?? 100}%` }} />
-                  {(res.xm ?? 100) >= 100 ? <span className="res-bar-cap" /> : null}
+                  <span className="res-bar-fill" style={{ height: `${res?.xm ?? 0}%` }} />
+                  {(res?.xm ?? 0) >= 100 ? <span className="res-bar-cap" /> : null}
                 </span>
               </div>
             </div>

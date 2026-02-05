@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import Modal from '../components/Modal.jsx';
+import { getInventoryIcon } from '../utils/itemIcons.js';
 
 const tabs = [
   { key: 'weapon', label: 'Weapons' },
@@ -110,7 +111,14 @@ export default function InventoryModal({ open, onClose, items = [], onRecycle })
         </div>
 
         <div className="inventory-list">
-          {(tab === 'key' ? sorted : filtered).map((item) => (
+          {(tab === 'key' ? sorted : filtered).map((item) => {
+            const icon = getInventoryIcon(item);
+            const iconEl = icon ? (
+              <img className="inventory-icon" src={icon} alt={item.name || 'item'} />
+            ) : (
+              <span className="inventory-icon placeholder" />
+            );
+            return (
             <label
               key={item.id}
               className={`inventory-row ${focused?.id === item.id ? 'active' : ''}`}
@@ -161,25 +169,29 @@ export default function InventoryModal({ open, onClose, items = [], onRecycle })
                     </span>
                   </span>
                 ) : (
-                  <>
-                    <span className="item-name">{item.name}</span>
-                    <span className="item-meta">
-                      {item.type === 'mod' || item.subtype === 'VIRUS' ? (
-                        <span className={`rarity ${item.rarity || 'C'}`} aria-label={item.rarity}>
-                          ///
-                        </span>
-                      ) : (
-                        <span className={`item-level ${levelClass(item.level || 0)}`}>
-                          L{item.level || 0}
-                        </span>
-                      )}
-                      <span className="item-count">x{item.count}</span>
+                  <span className="inventory-item">
+                    {iconEl}
+                    <span className="inventory-item-info">
+                      <span className="item-name">{item.name}</span>
+                      <span className="item-meta">
+                        {item.type === 'mod' || item.subtype === 'VIRUS' ? (
+                          <span className={`rarity ${item.rarity || 'C'}`} aria-label={item.rarity}>
+                            ///
+                          </span>
+                        ) : (
+                          <span className={`item-level ${levelClass(item.level || 0)}`}>
+                            L{item.level || 0}
+                          </span>
+                        )}
+                        <span className="item-count">x{item.count}</span>
+                      </span>
                     </span>
-                  </>
+                  </span>
                 )}
               </button>
             </label>
-          ))}
+          );
+          })}
         </div>
 
         <div className="inventory-count">

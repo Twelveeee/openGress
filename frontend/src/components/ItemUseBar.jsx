@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { getInventoryIcon } from '../utils/itemIcons.js';
 
 function levelClass(level) {
   if (level <= 3) return 'lvl-low';
@@ -13,6 +14,8 @@ export default function ItemUseBar({
   selectedId,
   onSelect,
   onAction,
+  actionDisabled = false,
+  actionDisabledText,
   actionClassName = '',
   footerText,
   notice,
@@ -74,15 +77,16 @@ export default function ItemUseBar({
             </div>
           ) : null}
           <button
-            className={`item-use-action ${actionClassName}`}
+            className={`item-use-action ${actionClassName} ${actionDisabled ? 'disabled' : ''}`}
             onClick={onAction}
+            disabled={actionDisabled}
             onMouseDown={onActionMouseDown}
             onMouseUp={onActionMouseUp}
             onMouseLeave={onActionMouseLeave}
             onTouchStart={onActionTouchStart}
             onTouchEnd={onActionTouchEnd}
           >
-            {actionLabel}
+            {actionDisabled && actionDisabledText ? actionDisabledText : actionLabel}
           </button>
         </div>
         <div className="item-use-spacer" />
@@ -96,25 +100,30 @@ export default function ItemUseBar({
         onMouseUp={stopDrag}
         onMouseLeave={stopDrag}
       >
-        {items.map((item) => (
-          <button
-            key={item.id}
-            className={`item-use-card ${item.id === selectedId ? 'active' : ''}`}
-            onClick={() => onSelect?.(item.id)}
-          >
-            <div className="item-use-sprite" />
-            <div className="item-use-meta">
-              {itemMode === 'rarity' || item.type === 'mod' ? (
-                <span className={`rarity ${item.rarity || 'C'}`}>///</span>
-              ) : (
-                <span className={`item-use-level ${levelClass(item.level || 0)}`}>
-                  L{item.level || 0}
-                </span>
-              )}
-              <span className="item-use-count">x{item.count ?? 0}</span>
-            </div>
-          </button>
-        ))}
+        {items.map((item) => {
+          const icon = getInventoryIcon(item);
+          return (
+            <button
+              key={item.id}
+              className={`item-use-card ${item.id === selectedId ? 'active' : ''}`}
+              onClick={() => onSelect?.(item.id)}
+            >
+              <div className={`item-use-sprite ${icon ? 'has-icon' : ''}`}>
+                {icon ? <img className="item-use-icon" src={icon} alt={item.name || 'item'} /> : null}
+              </div>
+              <div className="item-use-meta">
+                {itemMode === 'rarity' || item.type === 'mod' ? (
+                  <span className={`rarity ${item.rarity || 'C'}`}>///</span>
+                ) : (
+                  <span className={`item-use-level ${levelClass(item.level || 0)}`}>
+                    L{item.level || 0}
+                  </span>
+                )}
+                <span className="item-use-count">x{item.count ?? 0}</span>
+              </div>
+            </button>
+          );
+        })}
       </div>
       {footerText ? <div className="item-use-footer">{footerText}</div> : null}
     </section>
