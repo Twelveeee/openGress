@@ -1,0 +1,495 @@
+[
+  {
+    "id": "installed.empty",
+    "kind": "installed",
+    "mod": "empty",
+    "url": "https://static.wikia.nocookie.net/ingress/images/4/4c/Prime-Portal_Mod_Icon-Empty.png"
+  },
+  {
+    "id": "installed.ito_en_transmuter.down",
+    "kind": "installed",
+    "mod": "ito_en_transmuter",
+    "variant": "down",
+    "url": "https://static.wikia.nocookie.net/ingress/images/9/94/Prime-Portal_Mod_Icon-ITO_EN_Transmuter-Down.png"
+  },
+  {
+    "id": "installed.ito_en_transmuter.up",
+    "kind": "installed",
+    "mod": "ito_en_transmuter",
+    "variant": "up",
+    "url": "https://static.wikia.nocookie.net/ingress/images/9/9e/Prime-Portal_Mod_Icon-ITO_EN_Transmuter-Up.png"
+  },
+  {
+    "id": "installed.link_amp.rare",
+    "kind": "installed",
+    "mod": "link_amp",
+    "rarity": "rare",
+    "url": "https://static.wikia.nocookie.net/ingress/images/4/4b/Prime-Portal_Mod_Icon-Link_Amp-Rare.png"
+  },
+  {
+    "id": "installed.link_amp.very_rare",
+    "kind": "installed",
+    "mod": "link_amp",
+    "rarity": "very_rare",
+    "url": "https://static.wikia.nocookie.net/ingress/images/1/19/Prime-Portal_Mod_Icon-Link_Amp-Very_Rare.png"
+  },
+  {
+    "id": "installed.softbank_ultra_link",
+    "kind": "installed",
+    "mod": "softbank_ultra_link",
+    "url": "https://static.wikia.nocookie.net/ingress/images/d/df/Prime-Portal_Mod_Icon-SoftBank_Ultra_Link.png"
+  },
+  {
+    "id": "installed.multi_hack.common",
+    "kind": "installed",
+    "mod": "multi_hack",
+    "rarity": "common",
+    "url": "https://static.wikia.nocookie.net/ingress/images/5/53/Prime-Portal_Mod_Icon-Multi-Hack-Common.png"
+  },
+  {
+    "id": "installed.multi_hack.rare",
+    "kind": "installed",
+    "mod": "multi_hack",
+    "rarity": "rare",
+    "url": "https://static.wikia.nocookie.net/ingress/images/9/9c/Prime-Portal_Mod_Icon-Multi-Hack-Rare.png"
+  },
+  {
+    "id": "installed.multi_hack.very_rare",
+    "kind": "installed",
+    "mod": "multi_hack",
+    "rarity": "very_rare",
+    "url": "https://static.wikia.nocookie.net/ingress/images/d/d7/Prime-Portal_Mod_Icon-Multi-Hack-Very_Rare.png"
+  },
+  {
+    "id": "installed.heat_sink.common",
+    "kind": "installed",
+    "mod": "heat_sink",
+    "rarity": "common",
+    "url": "https://static.wikia.nocookie.net/ingress/images/3/3b/Prime-Portal_Mod_Icon-Heat_Sink-Common.png"
+  },
+  {
+    "id": "installed.heat_sink.rare",
+    "kind": "installed",
+    "mod": "heat_sink",
+    "rarity": "rare",
+    "url": "https://static.wikia.nocookie.net/ingress/images/3/31/Prime-Portal_Mod_Icon-Heat_Sink-Rare.png"
+  },
+  {
+    "id": "installed.heat_sink.very_rare",
+    "kind": "installed",
+    "mod": "heat_sink",
+    "rarity": "very_rare",
+    "url": "https://static.wikia.nocookie.net/ingress/images/c/c2/Prime-Portal_Mod_Icon-Heat_Sink-Very_Rare.png"
+  },
+  {
+    "id": "installed.turret",
+    "kind": "installed",
+    "mod": "turret",
+    "url": "https://static.wikia.nocookie.net/ingress/images/5/52/Prime-Portal_Mod_Icon-Turret.png"
+  },
+  {
+    "id": "installed.force_amp",
+    "kind": "installed",
+    "mod": "force_amp",
+    "url": "https://static.wikia.nocookie.net/ingress/images/b/b2/Prime-Portal_Mod_Icon-Force_Amp.png"
+  },
+  {
+    "id": "installed.portal_shield.common",
+    "kind": "installed",
+    "mod": "portal_shield",
+    "rarity": "common",
+    "url": "https://static.wikia.nocookie.net/ingress/images/b/b3/Prime-Portal_Mod_Icon-Portal_Shield-Common.png"
+  },
+  {
+    "id": "installed.portal_shield.rare",
+    "kind": "installed",
+    "mod": "portal_shield",
+    "rarity": "rare",
+    "url": "https://static.wikia.nocookie.net/ingress/images/a/ad/Prime-Portal_Mod_Icon-Portal_Shield-Rare.png"
+  },
+  {
+    "id": "installed.portal_shield.very_rare",
+    "kind": "installed",
+    "mod": "portal_shield",
+    "rarity": "very_rare",
+    "url": "https://static.wikia.nocookie.net/ingress/images/b/b4/Prime-Portal_Mod_Icon-Portal_Shield-Very_Rare.png"
+  },
+  {
+    "id": "installed.portal_shield.aegis",
+    "kind": "installed",
+    "mod": "portal_shield",
+    "variant": "aegis",
+    "url": "https://static.wikia.nocookie.net/ingress/images/4/42/Prime-Portal_Mod_Icon-Aegis_Shield.png"
+  },
+  {
+    "id": "inventory.portal_shield.common",
+    "kind": "inventory",
+    "mod": "portal_shield",
+    "rarity": "common",
+    "url": "https://static.wikia.nocookie.net/ingress/images/b/b6/Portal_Shield_Common.png"
+  },
+  {
+    "id": "inventory.portal_shield.rare",
+    "kind": "inventory",
+    "mod": "portal_shield",
+    "rarity": "rare",
+    "url": "https://static.wikia.nocookie.net/ingress/images/7/7c/Portal_Shield_Rare.png"
+  },
+  {
+    "id": "inventory.portal_shield.very_rare",
+    "kind": "inventory",
+    "mod": "portal_shield",
+    "rarity": "very_rare",
+    "url": "https://static.wikia.nocookie.net/ingress/images/e/e4/Portal_Shield_Very_Rare.png"
+  },
+  {
+    "id": "inventory.portal_shield.aegis",
+    "kind": "inventory",
+    "mod": "portal_shield",
+    "variant": "aegis",
+    "url": "https://static.wikia.nocookie.net/ingress/images/2/2f/Aegis_Shield.png"
+  },
+  {
+    "id": "inventory.portal_shield.axa",
+    "kind": "inventory",
+    "mod": "portal_shield",
+    "variant": "axa",
+    "url": "https://static.wikia.nocookie.net/ingress/images/c/ce/AXA_Shield.png"
+  },
+  {
+    "id": "inventory.link_amp.rare",
+    "kind": "inventory",
+    "mod": "link_amp",
+    "rarity": "rare",
+    "url": "https://static.wikia.nocookie.net/ingress/images/e/ec/Link_Amp_Rare.png"
+  },
+  {
+    "id": "inventory.link_amp.very_rare",
+    "kind": "inventory",
+    "mod": "link_amp",
+    "rarity": "very_rare",
+    "url": "https://static.wikia.nocookie.net/ingress/images/b/b9/Link_Amp_Very_Rare.png"
+  },
+  {
+    "id": "inventory.softbank_ultra_link",
+    "kind": "inventory",
+    "mod": "softbank_ultra_link",
+    "url": "https://static.wikia.nocookie.net/ingress/images/d/da/SoftBank_Ultra_Link.png"
+  },
+  {
+    "id": "inventory.heat_sink.common",
+    "kind": "inventory",
+    "mod": "heat_sink",
+    "rarity": "common",
+    "url": "https://static.wikia.nocookie.net/ingress/images/7/7d/Heat_Sink_Common.png"
+  },
+  {
+    "id": "inventory.heat_sink.rare",
+    "kind": "inventory",
+    "mod": "heat_sink",
+    "rarity": "rare",
+    "url": "https://static.wikia.nocookie.net/ingress/images/9/9b/Heat_Sink_Rare.png"
+  },
+  {
+    "id": "inventory.heat_sink.very_rare",
+    "kind": "inventory",
+    "mod": "heat_sink",
+    "rarity": "very_rare",
+    "url": "https://static.wikia.nocookie.net/ingress/images/c/c6/Heat_Sink_Very_Rare.png"
+  },
+  {
+    "id": "inventory.multi_hack.common",
+    "kind": "inventory",
+    "mod": "multi_hack",
+    "rarity": "common",
+    "url": "https://static.wikia.nocookie.net/ingress/images/7/74/Multi-Hack_Common.png"
+  },
+  {
+    "id": "inventory.multi_hack.rare",
+    "kind": "inventory",
+    "mod": "multi_hack",
+    "rarity": "rare",
+    "url": "https://static.wikia.nocookie.net/ingress/images/f/f0/Multi-Hack_Rare.png"
+  },
+  {
+    "id": "inventory.multi_hack.very_rare",
+    "kind": "inventory",
+    "mod": "multi_hack",
+    "rarity": "very_rare",
+    "url": "https://static.wikia.nocookie.net/ingress/images/b/bb/Multi-Hack_Very_Rare.png"
+  },
+  {
+    "id": "inventory.force_amp",
+    "kind": "inventory",
+    "mod": "force_amp",
+    "url": "https://static.wikia.nocookie.net/ingress/images/f/f7/Force_Amp.png"
+  },
+  {
+    "id": "inventory.turret",
+    "kind": "inventory",
+    "mod": "turret",
+    "url": "https://static.wikia.nocookie.net/ingress/images/3/32/Turret.png"
+  },
+  {
+    "id": "inventory.ito_en_transmuter.down",
+    "kind": "inventory",
+    "mod": "ito_en_transmuter",
+    "variant": "down",
+    "url": "https://static.wikia.nocookie.net/ingress/images/6/68/ITO_EN_Transmuter-.png"
+  },
+  {
+    "id": "inventory.ito_en_transmuter.up",
+    "kind": "inventory",
+    "mod": "ito_en_transmuter",
+    "variant": "up",
+    "url": "https://static.wikia.nocookie.net/ingress/images/5/55/ITO_EN_Transmuter%2B.png"
+  },
+  {
+    "id": "inventory.resonator.l8",
+    "kind": "inventory",
+    "mod": "resonator",
+    "level": 8,
+    "url": "https://static.wikia.nocookie.net/ingress/images/0/0a/Prime-L8-Resonator.png"
+  },
+  {
+    "id": "inventory.resonator.l7",
+    "kind": "inventory",
+    "mod": "resonator",
+    "level": 7,
+    "url": "https://static.wikia.nocookie.net/ingress/images/9/9d/Prime-L7-Resonator.png"
+  },
+  {
+    "id": "inventory.resonator.l6",
+    "kind": "inventory",
+    "mod": "resonator",
+    "level": 6,
+    "url": "https://static.wikia.nocookie.net/ingress/images/1/13/Prime-L6-Resonator.png"
+  },
+  {
+    "id": "inventory.resonator.l5",
+    "kind": "inventory",
+    "mod": "resonator",
+    "level": 5,
+    "url": "https://static.wikia.nocookie.net/ingress/images/3/31/Prime-L5-Resonator.png"
+  },
+  {
+    "id": "inventory.resonator.l4",
+    "kind": "inventory",
+    "mod": "resonator",
+    "level": 4,
+    "url": "https://static.wikia.nocookie.net/ingress/images/1/11/Prime-L4-Resonator.png"
+  },
+  {
+    "id": "inventory.resonator.l3",
+    "kind": "inventory",
+    "mod": "resonator",
+    "level": 3,
+    "url": "https://static.wikia.nocookie.net/ingress/images/1/16/Prime-L3-Resonator.png"
+  },
+  {
+    "id": "inventory.resonator.l2",
+    "kind": "inventory",
+    "mod": "resonator",
+    "level": 2,
+    "url": "https://static.wikia.nocookie.net/ingress/images/b/ba/Prime-L2-Resonator.png"
+  },
+  {
+    "id": "inventory.resonator.l1",
+    "kind": "inventory",
+    "mod": "resonator",
+    "level": 1,
+    "url": "https://static.wikia.nocookie.net/ingress/images/d/d0/Prime-L1-Resonator.png"
+  },
+  {
+    "id": "inventory.virus.jarvis",
+    "kind": "inventory",
+    "mod": "jarvis_virus",
+    "url": "https://static.wikia.nocookie.net/ingress/images/f/f1/JARVIS_Virus_Prime.png"
+  },
+  {
+    "id": "inventory.virus.ada_refactor",
+    "kind": "inventory",
+    "mod": "ada_refactor",
+    "url": "https://static.wikia.nocookie.net/ingress/images/0/09/ADA_Refactor_Prime.png"
+  },
+  {
+    "id": "inventory.xmp_burster.l1",
+    "kind": "inventory",
+    "mod": "xmp_burster",
+    "level": 1,
+    "url": "https://static.wikia.nocookie.net/ingress/images/3/30/XMP_Burster_L1.png"
+  },
+  {
+    "id": "inventory.xmp_burster.l2",
+    "kind": "inventory",
+    "mod": "xmp_burster",
+    "level": 2,
+    "url": "https://static.wikia.nocookie.net/ingress/images/a/a6/XMP_Burster_L2.png"
+  },
+  {
+    "id": "inventory.xmp_burster.l3",
+    "kind": "inventory",
+    "mod": "xmp_burster",
+    "level": 3,
+    "url": "https://static.wikia.nocookie.net/ingress/images/e/e3/XMP_Burster_L3.png"
+  },
+  {
+    "id": "inventory.xmp_burster.l4",
+    "kind": "inventory",
+    "mod": "xmp_burster",
+    "level": 4,
+    "url": "https://static.wikia.nocookie.net/ingress/images/e/e4/XMP_Burster_L4.png"
+  },
+  {
+    "id": "inventory.xmp_burster.l5",
+    "kind": "inventory",
+    "mod": "xmp_burster",
+    "level": 5,
+    "url": "https://static.wikia.nocookie.net/ingress/images/d/d5/XMP_Burster_L5.png"
+  },
+  {
+    "id": "inventory.xmp_burster.l6",
+    "kind": "inventory",
+    "mod": "xmp_burster",
+    "level": 6,
+    "url": "https://static.wikia.nocookie.net/ingress/images/4/4c/XMP_Burster_L6.png"
+  },
+  {
+    "id": "inventory.xmp_burster.l7",
+    "kind": "inventory",
+    "mod": "xmp_burster",
+    "level": 7,
+    "url": "https://static.wikia.nocookie.net/ingress/images/d/d4/XMP_Burster_L7.png"
+  },
+  {
+    "id": "inventory.xmp_burster.l8",
+    "kind": "inventory",
+    "mod": "xmp_burster",
+    "level": 8,
+    "url": "https://static.wikia.nocookie.net/ingress/images/0/0b/XMP_Burster_L8.png"
+  },
+  {
+    "id": "inventory.portal_key",
+    "kind": "inventory",
+    "mod": "portal_key",
+    "url": "https://static.wikia.nocookie.net/ingress/images/3/39/Portal_Key.png"
+  },
+  {
+    "id": "inventory.ultra_strike.l1",
+    "kind": "inventory",
+    "mod": "ultra_strike",
+    "level": 1,
+    "url": "https://static.wikia.nocookie.net/ingress/images/a/a7/Ultra_Strike_L1.png"
+  },
+  {
+    "id": "inventory.ultra_strike.l2",
+    "kind": "inventory",
+    "mod": "ultra_strike",
+    "level": 2,
+    "url": "https://static.wikia.nocookie.net/ingress/images/9/9d/Ultra_Strike_L2.png"
+  },
+  {
+    "id": "inventory.ultra_strike.l3",
+    "kind": "inventory",
+    "mod": "ultra_strike",
+    "level": 3,
+    "url": "https://static.wikia.nocookie.net/ingress/images/6/66/Ultra_Strike_L3.png"
+  },
+  {
+    "id": "inventory.ultra_strike.l4",
+    "kind": "inventory",
+    "mod": "ultra_strike",
+    "level": 4,
+    "url": "https://static.wikia.nocookie.net/ingress/images/e/ec/Ultra_Strike_L4.png"
+  },
+  {
+    "id": "inventory.ultra_strike.l5",
+    "kind": "inventory",
+    "mod": "ultra_strike",
+    "level": 5,
+    "url": "https://static.wikia.nocookie.net/ingress/images/b/b2/Ultra_Strike_L5.png"
+  },
+  {
+    "id": "inventory.ultra_strike.l6",
+    "kind": "inventory",
+    "mod": "ultra_strike",
+    "level": 6,
+    "url": "https://static.wikia.nocookie.net/ingress/images/c/c1/Ultra_Strike_L6.png"
+  },
+  {
+    "id": "inventory.ultra_strike.l7",
+    "kind": "inventory",
+    "mod": "ultra_strike",
+    "level": 7,
+    "url": "https://static.wikia.nocookie.net/ingress/images/d/d5/Ultra_Strike_L7.png"
+  },
+  {
+    "id": "inventory.ultra_strike.l8",
+    "kind": "inventory",
+    "mod": "ultra_strike",
+    "level": 8,
+    "url": "https://static.wikia.nocookie.net/ingress/images/6/66/Ultra_Strike_L8.png"
+  },
+  {
+    "id": "inventory.power_cube.l1",
+    "kind": "inventory",
+    "mod": "power_cube",
+    "level": 1,
+    "url": "https://static.wikia.nocookie.net/ingress/images/2/23/Power_Cube_L1.png"
+  },
+  {
+    "id": "inventory.power_cube.l2",
+    "kind": "inventory",
+    "mod": "power_cube",
+    "level": 2,
+    "url": "https://static.wikia.nocookie.net/ingress/images/8/8d/Power_Cube_L2.png"
+  },
+  {
+    "id": "inventory.power_cube.l3",
+    "kind": "inventory",
+    "mod": "power_cube",
+    "level": 3,
+    "url": "https://static.wikia.nocookie.net/ingress/images/3/36/Power_Cube_L3.png"
+  },
+  {
+    "id": "inventory.power_cube.l4",
+    "kind": "inventory",
+    "mod": "power_cube",
+    "level": 4,
+    "url": "https://static.wikia.nocookie.net/ingress/images/0/03/Power_Cube_L4.png"
+  },
+  {
+    "id": "inventory.power_cube.l5",
+    "kind": "inventory",
+    "mod": "power_cube",
+    "level": 5,
+    "url": "https://static.wikia.nocookie.net/ingress/images/a/ab/Power_Cube_L5.png"
+  },
+  {
+    "id": "inventory.power_cube.l6",
+    "kind": "inventory",
+    "mod": "power_cube",
+    "level": 6,
+    "url": "https://static.wikia.nocookie.net/ingress/images/6/68/Power_Cube_L6.png"
+  },
+  {
+    "id": "inventory.power_cube.l7",
+    "kind": "inventory",
+    "mod": "power_cube",
+    "level": 7,
+    "url": "https://static.wikia.nocookie.net/ingress/images/f/f4/Power_Cube_L7.png"
+  },
+  {
+    "id": "inventory.power_cube.l8",
+    "kind": "inventory",
+    "mod": "power_cube",
+    "level": 8,
+    "url": "https://static.wikia.nocookie.net/ingress/images/0/09/Power_Cube_L8.png"
+  },
+  {
+    "id": "inventory.hypercube",
+    "kind": "inventory",
+    "mod": "hypercube",
+    "url": "https://static.wikia.nocookie.net/ingress/images/0/0f/Hypercube.png"
+  }
+]
