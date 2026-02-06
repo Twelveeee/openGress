@@ -34,16 +34,13 @@ function levelClass(level) {
   return 'lvl-high';
 }
 
-export default function PortalModal({ open, onClose, portal, onDeploy, onModDeploy }) {
-  const name = portal?.name || 'Arcoiris';
+export default function PortalModal({ open, onClose, portal, onDeploy, onModDeploy, onLink, onCharge }) {
+  const name = portal?.name || 'Portal';
   const level = portal?.level ?? 1;
-  const faction = portal?.faction || 'RESISTANCE';
+  const faction = portal?.faction || 'NEUTRAL';
   const image = portal?.image || '';
-  const owner = portal?.owner || '';
-  const distance = portal?.distance ?? 13900;
-  const description =
-    portal?.description ||
-    'This was meant to be a rainbow, but the installation of Arcoiris, there is a...';
+  const owner = portal?.owner || '—';
+  const description = portal?.description || `Faction: ${factionLabel(faction)}`;
   const resonators = portal?.resonators || Array.from({ length: 8 }, () => null);
   const leftRes = resonators.slice(0, 4);
   const rightRes = resonators.slice(4);
@@ -51,9 +48,8 @@ export default function PortalModal({ open, onClose, portal, onDeploy, onModDepl
   const portalLevelClass = levelClass(level);
   const actions = [
     { key: 'deploy', label: 'Deploy', icon: '◐', onClick: onDeploy },
-    { key: 'link', label: 'Link', icon: '↗' },
-    { key: 'hack', label: 'Hack', icon: '◎' },
-    { key: 'charge', label: 'Charge', icon: '⚡' }
+    { key: 'link', label: 'Link', icon: '↗', onClick: onLink },
+    { key: 'charge', label: 'Charge', icon: '⚡', onClick: onCharge }
   ];
 
   return (
@@ -65,7 +61,7 @@ export default function PortalModal({ open, onClose, portal, onDeploy, onModDepl
             <h3>{name}</h3>
             <p className="muted">{description}</p>
             <div className="portal-meta">
-              <span>· {Math.round(distance / 100) / 10}km</span>
+              <span>· {factionLabel(faction)}</span>
               <span>
                 · Owner: <span className={ownerClass}>{owner}</span>
               </span>
@@ -73,25 +69,14 @@ export default function PortalModal({ open, onClose, portal, onDeploy, onModDepl
           </div>
         </div>
         <div className="portal-right">
-        <div
-          className="portal-photo"
-          style={image ? { backgroundImage: `url(${image})` } : undefined}
-        />
-        <div className="mod-grid">
-          {(portal?.mods || Array.from({ length: 4 }, () => null)).map((slot, idx) => (
-            <button
-              key={idx}
-              className={`mod-slot ${slot?.subtype ? '' : 'empty'}`}
-              onClick={onModDeploy}
-            >
-              <img
-                className="mod-slot-icon"
-                src={getInstalledModIcon(slot)}
-                alt={slot?.type || 'empty'}
-              />
-            </button>
-          ))}
-        </div>
+          <div className="portal-photo" style={image ? { backgroundImage: `url(${image})` } : undefined} />
+          <div className="mod-grid">
+            {(portal?.mods || Array.from({ length: 4 }, () => null)).map((slot, idx) => (
+              <button key={idx} className={`mod-slot ${slot?.subtype ? '' : 'empty'}`} onClick={onModDeploy}>
+                <img className="mod-slot-icon" src={getInstalledModIcon(slot)} alt={slot?.type || 'empty'} />
+              </button>
+            ))}
+          </div>
         </div>
       </header>
       <div className="portal-core-area">
@@ -110,9 +95,7 @@ export default function PortalModal({ open, onClose, portal, onDeploy, onModDepl
                 ) : (
                   <span className="res-level">—</span>
                 )}
-                <span className={`res-owner ${factionClass(res?.faction || faction)}`}>
-                  {res?.owner || ''}
-                </span>
+                <span className={`res-owner ${factionClass(res?.faction || faction)}`}>{res?.owner || ''}</span>
               </div>
             </div>
           ))}
@@ -130,9 +113,7 @@ export default function PortalModal({ open, onClose, portal, onDeploy, onModDepl
                 ) : (
                   <span className="res-level">—</span>
                 )}
-                <span className={`res-owner ${factionClass(res?.faction || faction)}`}>
-                  {res?.owner || ''}
-                </span>
+                <span className={`res-owner ${factionClass(res?.faction || faction)}`}>{res?.owner || ''}</span>
               </div>
               <div className={`res-xm ${factionClass(res?.faction || faction)}`}>
                 <span className="res-bar">
@@ -144,7 +125,7 @@ export default function PortalModal({ open, onClose, portal, onDeploy, onModDepl
           ))}
         </div>
       </div>
-      <footer className="portal-actions">
+      <footer className="portal-actions portal-actions-3">
         {actions.map((action) => (
           <button key={action.key} className="portal-action" onClick={action.onClick}>
             <span className="portal-action-icon">{action.icon}</span>

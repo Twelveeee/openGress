@@ -1,7 +1,7 @@
 import React from 'react';
 import Modal from '../components/Modal.jsx';
 
-export default function SettingsModal({ open, onClose }) {
+export default function SettingsModal({ open, onClose, autoHack, onToggleAutoHack }) {
   return (
     <Modal open={open} onClose={onClose}>
       <header className="modal-header">
@@ -9,13 +9,18 @@ export default function SettingsModal({ open, onClose }) {
       </header>
       <div className="settings-body">
         <label>
-          <input type="checkbox" /> 自动 Hack
+          <input
+            type="checkbox"
+            checked={Boolean(autoHack)}
+            onChange={(event) => onToggleAutoHack?.(event.target.checked)}
+          />{' '}
+          自动 Hack
         </label>
         <label>
-          <input type="checkbox" /> 显示连接线
+          <input type="checkbox" defaultChecked /> 显示连接线
         </label>
         <label>
-          <input type="checkbox" /> 显示控制场
+          <input type="checkbox" defaultChecked /> 显示控制场
         </label>
       </div>
     </Modal>

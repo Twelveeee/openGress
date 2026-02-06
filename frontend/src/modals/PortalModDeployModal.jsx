@@ -16,7 +16,8 @@ export default function PortalModDeployModal({
   modSlots = [],
   onUpdateSlots,
   items = [],
-  playerName = 'Agent'
+  playerName = 'Agent',
+  playerFaction = 'RESISTANCE'
 }) {
   const formatValue = (value) => (Number.isInteger(value) ? value : value.toFixed(2));
   const mods = useMemo(
@@ -73,7 +74,10 @@ export default function PortalModDeployModal({
     return current;
   };
 
-  const canInstall = portal?.faction && portal?.faction !== 'NEUTRAL' && portalFaction === 'RESISTANCE';
+  const canInstall =
+    portal?.faction &&
+    portal?.faction !== 'NEUTRAL' &&
+    portalFaction === String(playerFaction || '').toUpperCase();
 
   const handleInstall = () => {
     if (!canInstall) {
@@ -96,7 +100,8 @@ export default function PortalModDeployModal({
           type: selected.name,
           owner: playerName,
           rarity: selected.rarity || 'C',
-          subtype: selected.subtype || 'SHIELD'
+          subtype: selected.subtype || 'SHIELD',
+          modType: selected.modType || selected.subtype || 'SHIELD'
         };
       }
       return slot?.subtype ? slot : null;

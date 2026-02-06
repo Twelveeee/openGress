@@ -51,6 +51,14 @@ body {
   gap: 12px;
 }
 
+.player-chip-btn {
+  border: none;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+
 .player-avatar {
   width: 40px;
   height: 40px;
@@ -103,6 +111,30 @@ body {
 
 .xm-bar-text {
   font-size: 12px;
+  color: var(--muted);
+}
+
+.ap-mini {
+  width: 180px;
+  display: grid;
+  gap: 3px;
+}
+
+.ap-mini-track {
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.ap-mini-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f6c356, #ff7ac8);
+  box-shadow: 0 0 10px rgba(246, 195, 86, 0.45);
+}
+
+.ap-mini-text {
+  font-size: 11px;
   color: var(--muted);
 }
 
@@ -277,6 +309,10 @@ body {
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
 }
 
+.portal.link-source {
+  box-shadow: 0 0 0 2px rgba(246, 195, 86, 0.75), 0 0 12px rgba(246, 195, 86, 0.65);
+}
+
 .portal.res {
   border-color: rgba(10, 32, 60, 0.85);
   background: rgba(58, 160, 255, 0.3);
@@ -410,6 +446,15 @@ body {
   width: 220px;
 }
 
+.log-dock.compact {
+  width: 260px;
+  padding: 10px;
+}
+
+.log-dock.compact .log-body {
+  max-height: 96px;
+}
+
 .log-dock header {
   display: flex;
   align-items: center;
@@ -508,6 +553,13 @@ body {
   touch-action: none;
 }
 
+.modal-card.placement-bottom {
+  align-self: end;
+  margin: 0 auto max(12px, env(safe-area-inset-bottom));
+  width: min(640px, calc(100vw - 20px));
+  transform: none !important;
+}
+
 .modal-close {
   position: absolute;
   top: 12px;
@@ -529,6 +581,14 @@ body {
 
 .modal-header:active {
   cursor: grabbing;
+}
+
+.modal-card.placement-bottom .modal-header {
+  cursor: default;
+}
+
+.modal-card.placement-bottom .modal-header:active {
+  cursor: default;
 }
 
 .level-pill {
@@ -782,6 +842,10 @@ body {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
+}
+
+.portal-actions.portal-actions-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .portal-action {
@@ -1461,6 +1525,11 @@ body {
   justify-content: flex-end;
 }
 
+.manage-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .key-sort {
   display: flex;
   gap: 8px;
@@ -1502,6 +1571,10 @@ body {
   margin-top: 16px;
   display: grid;
   gap: 12px;
+}
+
+.attack-card.placement-bottom {
+  margin-bottom: max(8px, env(safe-area-inset-bottom));
 }
 
 .item-use {
@@ -1717,6 +1790,101 @@ body {
   border-radius: 10px;
   font-size: 12px;
   box-shadow: var(--glow);
+}
+
+.toast.toast-global {
+  position: fixed;
+  z-index: 1200;
+}
+
+.map-link-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  background: rgba(10, 16, 26, 0.92);
+  border: 1px solid rgba(246, 195, 86, 0.75);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #f6c356;
+  z-index: 8;
+}
+
+.auth-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.auth-card {
+  width: min(420px, 92vw);
+  border: 1px solid var(--panel-border);
+  border-radius: 18px;
+  padding: 18px;
+  background: rgba(6, 12, 24, 0.95);
+  box-shadow: var(--glow);
+  display: grid;
+  gap: 12px;
+}
+
+.auth-card h2 {
+  margin: 0;
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.auth-tabs button {
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.auth-tabs button.active {
+  color: var(--text);
+  border-color: rgba(58, 160, 255, 0.7);
+}
+
+.auth-form {
+  display: grid;
+  gap: 10px;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.auth-form input,
+.auth-form select {
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 9px 10px;
+}
+
+.auth-error {
+  border: 1px solid rgba(255, 77, 77, 0.6);
+  background: rgba(255, 77, 77, 0.12);
+  color: #ffb0b0;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.auth-submit {
+  width: 100%;
 }
 
 @media (max-width: 900px) {

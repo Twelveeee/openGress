@@ -27,7 +27,7 @@ function factionClass(faction) {
   }
 }
 
-export default function InventoryModal({ open, onClose, items = [], onRecycle }) {
+export default function InventoryModal({ open, onClose, items = [], onRecycle, onUse }) {
   const [tab, setTab] = useState('weapon');
   const [selectedId, setSelectedId] = useState(null);
   const [manageMode, setManageMode] = useState(false);
@@ -52,6 +52,14 @@ export default function InventoryModal({ open, onClose, items = [], onRecycle })
     onRecycle?.(selected);
     setSelected([]);
     setToast('回收成功');
+    setTimeout(() => setToast(''), 1200);
+  };
+
+  const useFocused = async () => {
+    if (!focused || focused.type === 'key') return;
+    const ok = await onUse?.(focused.id);
+    if (ok === false) return;
+    setToast('使用成功');
     setTimeout(() => setToast(''), 1200);
   };
 
@@ -268,6 +276,13 @@ export default function InventoryModal({ open, onClose, items = [], onRecycle })
                   ) : null}
                 </div>
               ) : null}
+              <button
+                className="ghost"
+                onClick={useFocused}
+                disabled={!focused || focused.type === 'key'}
+              >
+                Use 1
+              </button>
               <button className="primary" onClick={() => setManageMode(true)}>
                 Manage
               </button>
