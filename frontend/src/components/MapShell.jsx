@@ -20,7 +20,17 @@ function loadLeaflet() {
   });
 }
 
-export default function MapShell({ portals = [], links = [], fields = [], onOpenPortal }) {
+export default function MapShell({
+  portals = [],
+  links = [],
+  fields = [],
+  player,
+  nearbyPlayers = [],
+  onOpenPortal,
+  onTargetUpdate,
+  onViewUpdate,
+  linkMode
+}) {
   const mapRef = useRef(null);
   const leafletRef = useRef(null);
   const containerRef = useRef(null);
@@ -28,6 +38,7 @@ export default function MapShell({ portals = [], links = [], fields = [], onOpen
     portals: null,
     links: null,
     fields: null,
+    nearby: null,
     player: null,
     path: null,
     arrow: null
@@ -35,7 +46,10 @@ export default function MapShell({ portals = [], links = [], fields = [], onOpen
   const animRef = useRef({ raf: null, bearing: 0 });
   const [mapError, setMapError] = useState('');
   const [mapReady, setMapReady] = useState(false);
-  const [playerPos, setPlayerPos] = useState(OSM_CENTER);
+  const [playerPos, setPlayerPos] = useState([
+    Number(player?.latitude || OSM_CENTER[0]),
+    Number(player?.longitude || OSM_CENTER[1])
+  ]);
 
   useEffect(() => {
     let isMounted = true;
@@ -45,7 +59,7 @@ export default function MapShell({ portals = [], links = [], fields = [], onOpen
         if (!isMounted || mapRef.current) return;
         leafletRef.current = L;
         mapRef.current = L.map(containerRef.current, {
-          center: OSM_CENTER,
+          center: playerPos,
           zoom: 16,
           zoomControl: true
         });
@@ -57,6 +71,7 @@ export default function MapShell({ portals = [], links = [], fields = [], onOpen
         const fieldLayer = L.layerGroup().addTo(mapRef.current);
         const linkLayer = L.layerGroup().addTo(mapRef.current);
         const portalLayer = L.layerGroup().addTo(mapRef.current);
+        const nearbyLayer = L.layerGroup().addTo(mapRef.current);
 
         const playerIcon = L.divIcon({
           className: 'player-marker',
@@ -79,17 +94,24 @@ export default function MapShell({ portals = [], links = [], fields = [], onOpen
           const markerEl = playerMarker.getElement();
           if (markerEl) {
             const nav = markerEl.querySelector('.player-nav');
-            if (nav) {
-              nav.style.setProperty('--bearing', `${bearing}deg`);
-            }
+            if (nav) nav.style.setProperty('--bearing', `${bearing}deg`);
           }
           const dirEl = playerArrow.getElement();
           if (dirEl) {
             const nav = dirEl.querySelector('.player-direction-nav');
-            if (nav) {
-              nav.style.setProperty('--bearing', `${bearing}deg`);
-            }
+            if (nav) nav.style.setProperty('--bearing', `${bearing}deg`);
           }
+        };
+
+        const emitBounds = () => {
+          if (!mapRef.current) return;
+          const bounds = mapRef.current.getBounds();
+          onViewUpdate?.({
+            minLat: bounds.getSouth(),
+            maxLat: bounds.getNorth(),
+            minLon: bounds.getWest(),
+            maxLon: bounds.getEast()
+          });
         };
 
         const movePlayerTo = (nextPos) => {
@@ -104,12 +126,7 @@ export default function MapShell({ portals = [], links = [], fields = [], onOpen
           animRef.current.bearing = nextBearing;
           applyBearing(nextBearing);
 
-          if (overlayRef.current.path) {
-            overlayRef.current.path.remove();
-          }
-          if (overlayRef.current.arrow) {
-            overlayRef.current.arrow.remove();
-          }
+          if (overlayRef.current.path) overlayRef.current.path.remove();
 
           overlayRef.current.path = L.polyline([start, nextPos], {
             color: '#7fc9ff',
@@ -118,24 +135,7 @@ export default function MapShell({ portals = [], links = [], fields = [], onOpen
             opacity: 0.95
           }).addTo(mapRef.current);
 
-          overlayRef.current.arrow = L.marker(nextPos, {
-            icon: L.divIcon({
-              className: 'path-arrow',
-              html: '<div class="path-arrow-head"></div>',
-              iconSize: [14, 14],
-              iconAnchor: [7, 7]
-            }),
-            interactive: false
-          }).addTo(mapRef.current);
-
-          const arrowEl2 = overlayRef.current.arrow.getElement();
-          if (arrowEl2) {
-            arrowEl2.style.transform = `rotate(${targetBearing}deg)`;
-          }
-
-          if (animRef.current.raf) {
-            cancelAnimationFrame(animRef.current.raf);
-          }
+          if (animRef.current.raf) cancelAnimationFrame(animRef.current.raf);
 
           const startTime = performance.now();
           const animate = (now) => {
@@ -157,22 +157,26 @@ export default function MapShell({ portals = [], links = [], fields = [], onOpen
         mapRef.current.on('contextmenu', (event) => {
           const nextPos = [event.latlng.lat, event.latlng.lng];
           movePlayerTo(nextPos);
+          onTargetUpdate?.({ latitude: nextPos[0], longitude: nextPos[1] });
         });
+
+        mapRef.current.on('moveend', emitBounds);
+        mapRef.current.on('zoomend', emitBounds);
 
         overlayRef.current = {
           portals: portalLayer,
           links: linkLayer,
           fields: fieldLayer,
+          nearby: nearbyLayer,
           player: playerMarker,
           path: null,
           arrow: playerArrow
         };
         setMapReady(true);
+        setTimeout(emitBounds, 0);
       })
       .catch((err) => {
-        if (isMounted) {
-          setMapError(err.message || 'Leaflet load failed');
-        }
+        if (isMounted) setMapError(err.message || 'Leaflet load failed');
       });
 
     return () => {
@@ -181,14 +185,11 @@ export default function MapShell({ portals = [], links = [], fields = [], onOpen
         if (overlayRef.current.portals) overlayRef.current.portals.remove();
         if (overlayRef.current.links) overlayRef.current.links.remove();
         if (overlayRef.current.fields) overlayRef.current.fields.remove();
+        if (overlayRef.current.nearby) overlayRef.current.nearby.remove();
         if (overlayRef.current.player) overlayRef.current.player.remove();
         if (overlayRef.current.path) overlayRef.current.path.remove();
         if (overlayRef.current.arrow) overlayRef.current.arrow.remove();
-        overlayRef.current = { portals: null, links: null, fields: null, player: null, path: null, arrow: null };
-        if (animRef.current.raf) {
-          cancelAnimationFrame(animRef.current.raf);
-          animRef.current.raf = null;
-        }
+        if (animRef.current.raf) cancelAnimationFrame(animRef.current.raf);
         mapRef.current.remove();
         mapRef.current = null;
       }
@@ -196,10 +197,22 @@ export default function MapShell({ portals = [], links = [], fields = [], onOpen
   }, []);
 
   useEffect(() => {
+    const marker = overlayRef.current.player;
+    const arrow = overlayRef.current.arrow;
+    const next = [Number(player?.latitude), Number(player?.longitude)];
+    if (!marker || !arrow || !Number.isFinite(next[0]) || !Number.isFinite(next[1])) return;
+    marker.setLatLng(next);
+    arrow.setLatLng(next);
+    setPlayerPos(next);
+  }, [player?.latitude, player?.longitude]);
+
+  useEffect(() => {
     const map = mapRef.current;
     const L = leafletRef.current;
     const overlays = overlayRef.current;
-    if (!mapReady || !map || !L || !overlays.portals || !overlays.links || !overlays.fields) return;
+    if (!mapReady || !map || !L || !overlays.portals || !overlays.links || !overlays.fields || !overlays.nearby) {
+      return;
+    }
 
     overlays.fields.clearLayers();
     fields.forEach((field) => {
@@ -237,30 +250,39 @@ export default function MapShell({ portals = [], links = [], fields = [], onOpen
       const levelClass = portalLevelClass(portal.level || 1);
       const ring = buildResonatorRing(portal.resonators || []);
       const modRings = buildModRings(portal.mods || []);
+      const isSource = linkMode?.active && linkMode?.fromPortalId === portal.id;
       const icon = L.divIcon({
         className: 'portal-marker',
-        html: `<div class=\"portal ${factionClass} ${levelClass}\"><span class=\"portal-level-text\">L${portal.level || 1}</span>${ring}${modRings}</div>`,
+        html: `<div class="portal ${factionClass} ${levelClass} ${isSource ? 'link-source' : ''}"><span class="portal-level-text">L${portal.level || 1}</span>${ring}${modRings}</div>`,
         iconSize: [54, 54],
         iconAnchor: [27, 27]
       });
       const marker = L.marker([portal.lat, portal.lng], { icon }).addTo(overlays.portals);
-      marker.on('click', () => onOpenPortal(portal));
+      marker.on('click', () => onOpenPortal?.(portal));
     });
-  }, [fields, links, mapReady, onOpenPortal, portals]);
+
+    overlays.nearby.clearLayers();
+    nearbyPlayers.forEach((agent) => {
+      if (!Number.isFinite(agent.latitude) || !Number.isFinite(agent.longitude)) return;
+      L.circleMarker([agent.latitude, agent.longitude], {
+        radius: 5,
+        color: '#f6c356',
+        weight: 1,
+        fillColor: '#f6c356',
+        fillOpacity: 0.7
+      }).addTo(overlays.nearby);
+    });
+  }, [fields, links, linkMode, mapReady, nearbyPlayers, onOpenPortal, portals]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if (event.key === 'h' || event.key === 'H') {
-        if (mapRef.current) {
-          mapRef.current.setView(playerPos, mapRef.current.getZoom());
-        }
+      if ((event.key === 'h' || event.key === 'H') && mapRef.current) {
+        mapRef.current.setView(playerPos, mapRef.current.getZoom());
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [playerPos]);
 
   useEffect(() => {
@@ -277,6 +299,7 @@ export default function MapShell({ portals = [], links = [], fields = [], onOpen
     <section className="map-canvas" id="map">
       <div className="map-container" ref={containerRef} />
       {mapError ? <div className="map-error">{mapError}</div> : null}
+      {linkMode?.active ? <div className="map-link-hint">Link 模式：点击目标 Portal</div> : null}
     </section>
   );
 }
@@ -359,6 +382,5 @@ function bearingDeg(a, b) {
 }
 
 function shortestDeltaDeg(current, target) {
-  const diff = ((target - current + 540) % 360) - 180;
-  return diff;
+  return ((target - current + 540) % 360) - 180;
 }

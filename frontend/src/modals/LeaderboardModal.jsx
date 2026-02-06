@@ -1,7 +1,7 @@
 import React from 'react';
 import Modal from '../components/Modal.jsx';
 
-export default function LeaderboardModal({ open, onClose }) {
+export default function LeaderboardModal({ open, onClose, rows = [] }) {
   return (
     <Modal open={open} onClose={onClose} className="leaderboard-card">
       <header className="modal-header">
@@ -10,23 +10,28 @@ export default function LeaderboardModal({ open, onClose }) {
       <div className="leaderboard-body">
         <div className="tabs">
           <button className="tab active">全服</button>
-          <button className="tab">Resistance</button>
-          <button className="tab">Enlightened</button>
         </div>
-        <div className="leaderboard-row">
-          <span>#1</span>
-          <span>AgentNova</span>
-          <span>L10</span>
-          <span className="res">RES</span>
-          <span>2.4M AP</span>
-        </div>
-        <div className="leaderboard-row">
-          <span>#2</span>
-          <span>Cipher</span>
-          <span>L9</span>
-          <span className="enl">ENL</span>
-          <span>2.1M AP</span>
-        </div>
+        {rows.length ? (
+          rows.slice(0, 20).map((row, idx) => (
+            <div key={row.id || row.playerId || idx} className="leaderboard-row">
+              <span>#{idx + 1}</span>
+              <span>{row.username || row.name || 'Agent'}</span>
+              <span>L{row.level || 1}</span>
+              <span className={String(row.faction || '').startsWith('RES') ? 'res' : 'enl'}>
+                {String(row.faction || '').slice(0, 3)}
+              </span>
+              <span>{Number(row.ap || 0).toLocaleString('en-US')} AP</span>
+            </div>
+          ))
+        ) : (
+          <div className="leaderboard-row">
+            <span>#-</span>
+            <span>暂无数据</span>
+            <span>L-</span>
+            <span>---</span>
+            <span>0 AP</span>
+          </div>
+        )}
       </div>
     </Modal>
   );
