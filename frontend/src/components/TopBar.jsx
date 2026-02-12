@@ -11,7 +11,7 @@ function formatNumber(value) {
   return Number(value || 0).toLocaleString('en-US');
 }
 
-export default function TopBar({ onOpen, player, ap }) {
+export default function TopBar({ onOpen, onLogout, player, ap }) {
   const username = player?.username || 'Agent';
   const level = Number(player?.level || 1);
   const xm = Number(player?.xm || 0);
@@ -60,6 +60,9 @@ export default function TopBar({ onOpen, player, ap }) {
         </button>
         <button className="icon-btn" onClick={() => onOpen('leaderboard')} title="排行榜">
           🏆
+        </button>
+        <button className="icon-btn" onClick={onLogout} title="退出登录">
+          🚪
         </button>
       </div>
     </header>

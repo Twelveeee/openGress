@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Modal from '../components/Modal.jsx';
 import ItemUseBar from '../components/ItemUseBar.jsx';
 import { getInstalledModIcon } from '../utils/itemIcons.js';
@@ -17,6 +17,8 @@ export default function PortalModDeployModal({
   onUpdateSlots,
   items = [],
   playerName = 'Agent',
+  playerId = '',
+  inRange = true,
   playerFaction = 'RESISTANCE'
 }) {
   const formatValue = (value) => (Number.isInteger(value) ? value : value.toFixed(2));
@@ -24,9 +26,22 @@ export default function PortalModDeployModal({
     () => items.filter((item) => item.type === 'mod' && item.count > 0),
     [items]
   );
-  const sortedMods = useMemo(() => mods.slice(), [mods]);
-  const [selectedId, setSelectedId] = useState(sortedMods[0]?.id || null);
-  const selected = sortedMods.find((item) => item.id === selectedId) || sortedMods[0];
+  const displayMods = useMemo(() => {
+    if (mods.length) return mods.slice();
+    return [
+      {
+        id: 'MOD_EMPTY',
+        name: 'No Mod',
+        type: 'placeholder',
+        subtype: 'NONE',
+        rarity: 'C',
+        count: 0,
+        placeholder: true
+      }
+    ];
+  }, [mods]);
+  const [selectedId, setSelectedId] = useState(mods[0]?.id || null);
+  const selected = mods.find((item) => item.id === selectedId) || mods[0] || null;
 
   const resolvedSlots = Array.from({ length: 4 }, (_, idx) => {
     const slot = modSlots[idx];
@@ -54,6 +69,16 @@ export default function PortalModDeployModal({
   const portalFactionClass =
     portalFaction === 'RESISTANCE' ? 'res' : portalFaction === 'ENLIGHTENED' ? 'enl' : 'neutral';
 
+  useEffect(() => {
+    if (!mods.length) {
+      setSelectedId(null);
+      return;
+    }
+    if (!selectedId || !mods.some((item) => item.id === selectedId)) {
+      setSelectedId(mods[0].id);
+    }
+  }, [mods, selectedId]);
+
   const showNotice = (message) => {
     if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
     setActionNotice(message);
@@ -65,7 +90,8 @@ export default function PortalModDeployModal({
     }, 200);
   };
 
-  const playerModCount = resolvedSlots.filter((slot) => slot.owner === playerName).length;
+  const selfOwners = new Set([playerName, playerId].filter(Boolean));
+  const playerModCount = resolvedSlots.filter((slot) => selfOwners.has(slot.owner)).length;
   const nextEmptySlot = (current) => {
     for (let i = 1; i <= 4; i += 1) {
       const next = (current + i) % 4;
@@ -74,13 +100,18 @@ export default function PortalModDeployModal({
     return current;
   };
 
-  const canInstall =
+  const canInstallByFaction =
     portal?.faction &&
     portal?.faction !== 'NEUTRAL' &&
     portalFaction === String(playerFaction || '').toUpperCase();
+  const canInstall = inRange && canInstallByFaction;
 
   const handleInstall = () => {
-    if (!canInstall) {
+    if (!inRange) {
+      showNotice('超出40m');
+      return;
+    }
+    if (!canInstallByFaction) {
       showNotice('先占领');
       return;
     }
@@ -89,7 +120,7 @@ export default function PortalModDeployModal({
       showNotice('slot occupied');
       return;
     }
-    if (playerModCount >= 2 && resolvedSlots[selectedSlot].owner !== playerName) {
+    if (playerModCount >= 2 && !selfOwners.has(resolvedSlots[selectedSlot].owner)) {
       showNotice('mod limit reached');
       return;
     }
@@ -191,31 +222,36 @@ export default function PortalModDeployModal({
 
       <div className="portal-mod-body">
         <div className="mod-slot-grid">
-          {resolvedSlots.map((slot, idx) => (
-            <div key={slot.id} className={`mod-slot-wrap ${idx < 2 ? 'top' : 'bottom'}`}>
-              <span className={`mod-slot-label ${idx < 2 ? 'top' : 'bottom'}`}>
-                {idx + 1}{' '}
-                <span className={portalFactionClass}>{playerName}</span>
-              </span>
-              <button
-                className={`mod-slot-cell ${selectedSlot === idx ? 'active' : ''}`}
-                onClick={() => setSelectedSlot(idx)}
-              >
-                <img
-                  className="mod-slot-installed-icon"
-                  src={getInstalledModIcon(slot)}
-                  alt={slot?.type || 'empty'}
-                />
-              </button>
-            </div>
-          ))}
+          {resolvedSlots.map((slot, idx) => {
+            const ownerLabel = selfOwners.has(slot.owner) ? playerName : slot.owner || '—';
+            return (
+              <div key={slot.id} className={`mod-slot-wrap ${idx < 2 ? 'top' : 'bottom'}`}>
+                <span className={`mod-slot-label ${idx < 2 ? 'top' : 'bottom'}`}>
+                  {idx + 1}{' '}
+                  <span className={slot.owner ? portalFactionClass : 'neutral'}>
+                    {ownerLabel}
+                  </span>
+                </span>
+                <button
+                  className={`mod-slot-cell ${selectedSlot === idx ? 'active' : ''}`}
+                  onClick={() => setSelectedSlot(idx)}
+                >
+                  <img
+                    className="mod-slot-installed-icon"
+                    src={getInstalledModIcon(slot)}
+                    alt={slot?.type || 'empty'}
+                  />
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       <ItemUseBar
         helpText="Install mod"
         actionLabel="INSTALL"
-        items={sortedMods}
+        items={displayMods}
         selectedId={selected?.id}
         onSelect={setSelectedId}
         onAction={handleInstall}
@@ -223,9 +259,9 @@ export default function PortalModDeployModal({
         noticeKey={actionNoticeKey}
         actionClassName={actionError ? 'error' : ''}
         itemMode="rarity"
-        footerText={selected ? `Install Mod: ${selected.name}` : 'Install Mod'}
-        actionDisabled={!canInstall}
-        actionDisabledText="先占领"
+        footerText={selected ? `Install Mod: ${selected.name}` : 'No Mod Available'}
+        actionDisabled={!canInstall || !selected}
+        actionDisabledText={!inRange ? '超出40m' : !canInstallByFaction ? '先占领' : '无 Mod'}
       />
     </Modal>
   );

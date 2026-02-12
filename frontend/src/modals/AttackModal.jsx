@@ -1,6 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Modal from '../components/Modal.jsx';
 import ItemUseBar from '../components/ItemUseBar.jsx';
+import {
+  attackCostForWeapon,
+  chargeBonusForProgress,
+  chargeDurationMs
+} from '../constants/attackProfiles.js';
 
 function sortWeapons(a, b) {
   const order = { XMP: 1, US: 2 };
@@ -10,7 +15,16 @@ function sortWeapons(a, b) {
   return Number(a.level || 0) - Number(b.level || 0);
 }
 
-export default function AttackModal({ open, onClose, items = [], onAttack, previewTargets }) {
+export default function AttackModal({
+  open,
+  onClose,
+  items = [],
+  playerXm = 0,
+  attackSpecs = null,
+  onAttack,
+  onChargeFxChange,
+  onAttackError
+}) {
   const weapons = useMemo(
     () =>
       items
@@ -18,6 +32,20 @@ export default function AttackModal({ open, onClose, items = [], onAttack, previ
         .sort(sortWeapons),
     [items]
   );
+  const displayWeapons = useMemo(() => {
+    if (weapons.length) return weapons;
+    return [
+      {
+        id: 'WEAPON_EMPTY',
+        name: 'No Weapon',
+        type: 'placeholder',
+        subtype: 'NONE',
+        level: 0,
+        count: 0,
+        placeholder: true
+      }
+    ];
+  }, [weapons]);
 
   const [selectedId, setSelectedId] = useState(weapons[0]?.id || null);
   const [charging, setCharging] = useState(false);
@@ -25,14 +53,28 @@ export default function AttackModal({ open, onClose, items = [], onAttack, previ
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const chargeRef = useRef(null);
+  const chargeValueRef = useRef(0);
+  const chargeDurationRef = useRef(1200);
+  const suppressClickRef = useRef(false);
 
   const selected = weapons.find((item) => item.id === selectedId) || weapons[0];
-  const targets = useMemo(() => (selected ? previewTargets?.(selected) || [] : []), [previewTargets, selected]);
+  const selectedWeapon = selected && !selected?.placeholder ? selected : null;
+  const selectedWeaponType = String(selectedWeapon?.subtype || '').toUpperCase();
+  const selectedWeaponLevel = Number(selectedWeapon?.level || 1);
+  const requiredXm = selectedWeapon
+    ? attackCostForWeapon(selectedWeaponType, selectedWeaponLevel, attackSpecs)
+    : 0;
+  const currentXm = Number(playerXm || 0);
+  const xmEnough = requiredXm <= 0 || currentXm >= requiredXm;
+  const xmNotice =
+    selectedWeapon && !xmEnough ? `XM不足（需要 ${requiredXm}，当前 ${Math.max(0, Math.floor(currentXm))}）` : '';
 
   useEffect(() => {
     if (!open) {
       setCharging(false);
       setCharge(0);
+      chargeValueRef.current = 0;
+      onChargeFxChange?.(null);
       setBusy(false);
       setNotice('');
       return;
@@ -40,15 +82,17 @@ export default function AttackModal({ open, onClose, items = [], onAttack, previ
     if (!selected && weapons[0]) {
       setSelectedId(weapons[0].id);
     }
-  }, [open, selected, weapons]);
+  }, [onChargeFxChange, open, selected, weapons]);
 
   useEffect(() => {
     if (!charging) return undefined;
     const start = performance.now();
+    const duration = Math.max(1, Number(chargeDurationRef.current || 1));
 
     const tick = (now) => {
-      const t = Math.min((now - start) / 1200, 1);
+      const t = Math.min((now - start) / duration, 1);
       setCharge(t);
+      chargeValueRef.current = t;
       chargeRef.current = requestAnimationFrame(tick);
     };
 
@@ -58,37 +102,61 @@ export default function AttackModal({ open, onClose, items = [], onAttack, previ
     };
   }, [charging]);
 
-  const fire = async () => {
-    if (!selected || busy) return;
+  const fire = async (chargeRatio = 0) => {
+    if (!selectedWeapon || busy) return;
+    if (!xmEnough) {
+      setNotice(xmNotice);
+      onAttackError?.(xmNotice);
+      return;
+    }
     setBusy(true);
-    const bonus = charge >= 0.7 ? 0.2 : charge >= 0.35 ? 0.1 : 0;
+    const bonus = chargeBonusForProgress(chargeRatio);
     try {
       const result = await onAttack?.({ item: selected, charge: bonus });
       if (result?.ok) {
-        setNotice(`命中 ${result.count || 0} 个目标`);
-      } else if (result?.count === 0) {
-        setNotice('范围内没有目标');
+        setNotice(`已发射 · 命中 ${result.count || 0}`);
+      } else {
+        const errorText = String(result?.error || '发射失败');
+        setNotice(errorText);
+        onAttackError?.(errorText);
       }
     } finally {
       setBusy(false);
       setCharge(0);
+      chargeValueRef.current = 0;
     }
   };
 
   const handleFireClick = () => {
+    if (suppressClickRef.current) return;
     if (charging || busy) return;
-    fire();
+    fire(0);
   };
 
   const handleChargeStart = () => {
-    if (!selected || busy) return;
+    if (!selectedWeapon || busy || charging || !xmEnough) return;
+    const durationMs = chargeDurationMs(selectedWeaponLevel);
+    chargeDurationRef.current = durationMs;
     setCharging(true);
+    chargeValueRef.current = 0;
+    onChargeFxChange?.({
+      active: true,
+      startAt: Date.now(),
+      durationMs,
+      weaponLevel: selectedWeaponLevel
+    });
   };
 
   const handleChargeEnd = () => {
     if (!charging) return;
+    suppressClickRef.current = true;
+    const ratio = chargeValueRef.current;
     setCharging(false);
-    fire();
+    onChargeFxChange?.(null);
+    fire(ratio);
+    window.setTimeout(() => {
+      suppressClickRef.current = false;
+    }, 0);
   };
 
   useEffect(() => {
@@ -114,19 +182,25 @@ export default function AttackModal({ open, onClose, items = [], onAttack, previ
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [open, charging, busy, selected]);
+  }, [busy, charging, open, selected, selectedWeapon, xmEnough]);
 
   return (
-    <Modal open={open} onClose={onClose} className="attack-card" placement="bottom">
+    <Modal
+      open={open}
+      onClose={onClose}
+      className="attack-card"
+      placement="bottom"
+      nonBlocking
+      closeOnBackdrop={false}
+    >
       <header className="modal-header">
         <h3>Attack</h3>
-        <span className="muted">范围目标: {targets.length}</span>
       </header>
       <div className="attack-body">
         <ItemUseBar
-          helpText="Fire weapon"
+          helpText="按住空格或长按 FIRE 蓄力，松开发射。加成从0%线性提升到20%，环越接近中心加成越高。"
           actionLabel={busy ? 'FIRING...' : 'FIRE'}
-          items={weapons}
+          items={displayWeapons}
           selectedId={selected?.id}
           onSelect={setSelectedId}
           onAction={handleFireClick}
@@ -136,13 +210,15 @@ export default function AttackModal({ open, onClose, items = [], onAttack, previ
           onActionMouseLeave={handleChargeEnd}
           onActionTouchStart={handleChargeStart}
           onActionTouchEnd={handleChargeEnd}
-          actionDisabled={!selected || busy}
+          onActionTouchCancel={handleChargeEnd}
+          actionDisabled={!selectedWeapon || busy || !xmEnough}
+          actionDisabledText={!selectedWeapon ? 'NO WEAPON' : !xmEnough ? 'XM LOW' : undefined}
           notice={notice}
-          noticeKey={`${selected?.id || 'none'}-${targets.length}`}
+          noticeKey={`${selected?.id || 'none'}-${notice}`}
           footerText={
-            selected
-              ? `${selected.name} L${selected.level || 1} · in-range ${targets.length}`
-              : '—'
+            selectedWeapon
+              ? `${selectedWeapon.name} L${selectedWeaponLevel}${charging ? ` · charge ${Math.round(charge * 100)}%` : ''}${xmNotice ? ` · ${xmNotice}` : ''}`
+              : '无可用攻击道具'
           }
         />
       </div>

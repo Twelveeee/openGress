@@ -25,7 +25,8 @@ export default function ItemUseBar({
   onActionMouseUp,
   onActionMouseLeave,
   onActionTouchStart,
-  onActionTouchEnd
+  onActionTouchEnd,
+  onActionTouchCancel
 }) {
   const listRef = useRef(null);
   const dragRef = useRef({ down: false, startX: 0, scrollLeft: 0 });
@@ -85,6 +86,7 @@ export default function ItemUseBar({
             onMouseLeave={onActionMouseLeave}
             onTouchStart={onActionTouchStart}
             onTouchEnd={onActionTouchEnd}
+            onTouchCancel={onActionTouchCancel}
           >
             {actionDisabled && actionDisabledText ? actionDisabledText : actionLabel}
           </button>
@@ -102,17 +104,25 @@ export default function ItemUseBar({
       >
         {items.map((item) => {
           const icon = getInventoryIcon(item);
+          const unavailable = Number(item.count ?? 0) <= 0;
+          const placeholder = Boolean(item.placeholder);
           return (
             <button
               key={item.id}
-              className={`item-use-card ${item.id === selectedId ? 'active' : ''}`}
-              onClick={() => onSelect?.(item.id)}
+              className={`item-use-card ${item.id === selectedId ? 'active' : ''} ${unavailable ? 'disabled' : ''} ${placeholder ? 'placeholder' : ''}`}
+              onClick={() => {
+                if (unavailable) return;
+                onSelect?.(item.id);
+              }}
+              disabled={unavailable}
             >
-              <div className={`item-use-sprite ${icon ? 'has-icon' : ''}`}>
+              <div className={`item-use-sprite ${icon ? 'has-icon' : ''} ${placeholder ? 'placeholder' : ''}`}>
                 {icon ? <img className="item-use-icon" src={icon} alt={item.name || 'item'} /> : null}
               </div>
               <div className="item-use-meta">
-                {itemMode === 'rarity' || item.type === 'mod' ? (
+                {placeholder ? (
+                  <span className="item-use-level">--</span>
+                ) : itemMode === 'rarity' || item.type === 'mod' ? (
                   <span className={`rarity ${item.rarity || 'C'}`}>///</span>
                 ) : (
                   <span className={`item-use-level ${levelClass(item.level || 0)}`}>

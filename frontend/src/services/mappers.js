@@ -17,8 +17,36 @@ const formatModSubtype = (modType) => {
   return type;
 };
 
+const maxResonatorEnergyByLevel = {
+  1: 1000,
+  2: 1500,
+  3: 2000,
+  4: 2500,
+  5: 3000,
+  6: 4000,
+  7: 5000,
+  8: 6000
+};
+
+const toResonatorXM = (level, energy) => {
+  const lvl = Number(level || 1);
+  const eng = Number(energy || 0);
+  const max = maxResonatorEnergyByLevel[lvl] || 1000;
+  if (!Number.isFinite(eng) || max <= 0) return 0;
+  return Math.max(0, Math.min(100, Math.round((eng / max) * 100)));
+};
+
 export const mapPlayer = (player) => {
   if (!player) return null;
+  const latitude = Number(player.position?.latitude ?? player.latitude ?? 39.908722);
+  const longitude = Number(player.position?.longitude ?? player.longitude ?? 116.397499);
+  const renderLatitude = Number(player.renderLatitude ?? latitude);
+  const renderLongitude = Number(player.renderLongitude ?? longitude);
+  const preRenderLatitude = Number(player.preRenderLatitude ?? renderLatitude);
+  const preRenderLongitude = Number(player.preRenderLongitude ?? renderLongitude);
+  const targetLatitude = Number(player.target?.latitude ?? player.targetLatitude);
+  const targetLongitude = Number(player.target?.longitude ?? player.targetLongitude);
+  const hasTarget = Number.isFinite(targetLatitude) && Number.isFinite(targetLongitude);
   return {
     id: player.id,
     username: player.username,
@@ -28,8 +56,17 @@ export const mapPlayer = (player) => {
     xm: Number(player.xm || 0),
     maxXm: Number(player.maxXm || 0),
     autoHack: Boolean(player.autoHack),
-    latitude: Number(player.position?.latitude ?? player.latitude ?? 39.908722),
-    longitude: Number(player.position?.longitude ?? player.longitude ?? 116.397499)
+    speedMps: Number(player.speedMps || 0),
+    headingDeg: Number(player.headingDeg || 0),
+    latitude,
+    longitude,
+    renderLatitude,
+    renderLongitude,
+    preRenderLatitude,
+    preRenderLongitude,
+    target: hasTarget ? { latitude: targetLatitude, longitude: targetLongitude } : null,
+    targetLatitude: hasTarget ? targetLatitude : null,
+    targetLongitude: hasTarget ? targetLongitude : null
   };
 };
 
@@ -39,24 +76,13 @@ export const mapPortalEntity = (portal) => {
   const resonators = Array.from({ length: 8 }, (_, i) => {
     const entry = resonatorMap[String(i + 1)] || resonatorMap[i + 1] || null;
     if (!entry) return null;
-    const maxEnergyByLevel = {
-      1: 1000,
-      2: 1500,
-      3: 2000,
-      4: 2500,
-      5: 3000,
-      6: 4000,
-      7: 5000,
-      8: 6000
-    };
-    const energy = Number(entry.energy || 0);
-    const max = maxEnergyByLevel[Number(entry.level || 1)] || 1000;
     return {
       slot: i + 1,
       level: Number(entry.level || 1),
       owner: entry.playerId || '',
       faction: portal?.faction || 'NEUTRAL',
-      xm: Math.max(0, Math.min(100, Math.round((energy / max) * 100)))
+      xm: toResonatorXM(entry.level, entry.energy),
+      version: Number(entry.version || 0)
     };
   });
 
@@ -74,7 +100,10 @@ export const mapPortalEntity = (portal) => {
 
   return {
     id: portal?.id,
-    name: portal?.name || portal?.id || 'Portal',
+    title: portal?.title || portal?.name || portal?.id || 'Portal',
+    name: portal?.title || portal?.name || portal?.id || 'Portal',
+    cover_url: portal?.cover_url || portal?.coverUrl || portal?.image || '',
+    image: portal?.cover_url || portal?.coverUrl || portal?.image || '',
     faction: portal?.faction || 'NEUTRAL',
     level: Number(portal?.level || 1),
     energy: Number(portal?.energy || 0),
@@ -251,11 +280,47 @@ export const formatWsLog = (type, message) => {
   const ts = new Date(message?.timestamp || Date.now());
   const hh = String(ts.getHours()).padStart(2, '0');
   const mm = String(ts.getMinutes()).padStart(2, '0');
+  const data = message?.data || {};
+  let text = data.message || data.portalId || '';
+  if (type === 'ATTACK') {
+    const weaponType = String(data.weaponType || '').toUpperCase();
+    const weaponLevel = Number(data.weaponLevel || 0);
+    const portalId = String(data.portalId || '');
+    const damage = Number(data.damage ?? data.damageDealt ?? 0);
+    const resonatorsDestroyed = Number(data.resonatorsDestroyed || 0);
+    const modsDestroyed = Array.isArray(data.modsDestroyed) ? data.modsDestroyed.length : 0;
+    const portalDamages = Array.isArray(data.portalDamages) ? data.portalDamages.length : 0;
+    const parts = [];
+    if (weaponType && weaponLevel > 0) {
+      parts.push(`${weaponType} L${weaponLevel}`);
+    }
+    if (portalId) {
+      parts.push(`@${portalId}`);
+    }
+    parts.push(`DMG ${damage}`);
+    parts.push(`RESO ${resonatorsDestroyed}`);
+    if (modsDestroyed > 0) {
+      parts.push(`MOD -${modsDestroyed}`);
+    }
+    if (portalDamages > 0) {
+      parts.push(`P${portalDamages}`);
+    }
+    if (data.counterattackTriggered || data.counterattack) {
+      parts.push(`COUNTER -${Number(data.counterattackDamage || 0)} XM`);
+    }
+    text = parts.join(' · ');
+  }
   return {
     id: `${type}-${message?.id || Math.random().toString(16).slice(2)}`,
     time: `${hh}:${mm}`,
+    timestamp: ts.getTime(),
     type,
-    text: message?.data?.message || message?.data?.portalId || ''
+    text,
+    message: text,
+    playerId: data.playerId || '',
+    portalId: data.portalId || '',
+    faction: data.faction || '',
+    mu: Number(data.mu || 0)
   };
 };
 
@@ -264,14 +329,26 @@ export const portalPatchFromUpdate = (update = {}) => {
   if (update.portalId) patch.id = update.portalId;
   if (update.faction) patch.faction = update.faction;
   if (update.portalLevel != null) patch.level = Number(update.portalLevel || 1);
+  if (update.level != null) patch.level = Number(update.level || 1);
   if (update.energy != null) patch.energy = Number(update.energy || 0);
+  if (update.owner) patch.owner = String(update.owner || '');
+
+  if (update.resonators != null) {
+    patch.resonatorsSnapshot = buildResonatorSnapshot(update.resonators, patch.faction || update.faction);
+  }
+  if (update.mods != null) {
+    patch.modsSnapshot = buildModSnapshot(update.mods);
+  }
 
   if (update.slot) {
+    const updateVersion = Number(update.version);
+    const slotEnergy = Number(update.slotEnergy);
     patch.resonatorUpdate = {
       slot: Number(update.slot),
       level: Number(update.level || 1),
-      energy: Number(update.energy || 0),
-      owner: update.playerId || ''
+      energy: Number.isFinite(slotEnergy) ? slotEnergy : null,
+      owner: update.playerId || '',
+      version: Number.isFinite(updateVersion) ? updateVersion : null
     };
   }
   if (update.modSlot) {
@@ -291,20 +368,45 @@ export const applyPortalPatch = (portal, patch) => {
   if (patch.faction) next.faction = patch.faction;
   if (patch.level != null) next.level = patch.level;
   if (patch.energy != null) next.energy = patch.energy;
+  if (patch.owner) next.owner = patch.owner;
+
+  if (patch.resonatorsSnapshot) {
+    next.resonators = patch.resonatorsSnapshot;
+    if (!patch.owner) {
+      next.owner = patch.resonatorsSnapshot.find((item) => item?.owner)?.owner || '';
+    }
+  }
+  if (patch.modsSnapshot) {
+    next.mods = patch.modsSnapshot;
+  }
 
   if (patch.resonatorUpdate) {
     const slots = [...(next.resonators || Array.from({ length: 8 }, () => null))];
     const idx = patch.resonatorUpdate.slot - 1;
     if (idx >= 0 && idx < 8) {
+      const prevSlot = slots[idx] || {};
+      const level = Number(patch.resonatorUpdate.level || prevSlot.level || 1);
+      const owner = patch.resonatorUpdate.owner || prevSlot.owner || '';
+      let xm = Number(prevSlot.xm || 0);
+      if (Number.isFinite(patch.resonatorUpdate.energy)) {
+        xm = toResonatorXM(level, patch.resonatorUpdate.energy);
+      } else if (level > 0) {
+        xm = Math.max(100, xm);
+      }
       slots[idx] = {
         slot: patch.resonatorUpdate.slot,
-        level: patch.resonatorUpdate.level,
-        owner: patch.resonatorUpdate.owner,
+        level,
+        owner,
         faction: next.faction,
-        xm: patch.resonatorUpdate.energy
+        xm,
+        version:
+          Number.isFinite(patch.resonatorUpdate.version) && patch.resonatorUpdate.version >= 0
+            ? Number(patch.resonatorUpdate.version)
+            : Number(prevSlot.version || 0)
       };
     }
     next.resonators = slots;
+    next.owner = slots.find((item) => item?.owner)?.owner || '';
   }
 
   if (patch.modUpdate) {
@@ -323,5 +425,52 @@ export const applyPortalPatch = (portal, patch) => {
   }
   return next;
 };
+
+const readSnapshotSlot = (source, slot) => {
+  if (Array.isArray(source)) {
+    return (
+      source.find((item) => Number(item?.slot) === slot) ||
+      source[slot - 1] ||
+      source[slot] ||
+      null
+    );
+  }
+  if (!source || typeof source !== 'object') return null;
+  return source[String(slot)] || source[slot] || null;
+};
+
+const buildResonatorSnapshot = (source, faction) =>
+  Array.from({ length: 8 }, (_, index) => {
+    const slot = index + 1;
+    const entry = readSnapshotSlot(source, slot);
+    if (!entry) return null;
+    const level = Number(entry.level || 0);
+    if (level <= 0) return null;
+    const energy = Number(entry.energy || 0);
+    return {
+      slot,
+      level,
+      owner: String(entry.playerId || entry.owner || ''),
+      faction: faction || 'NEUTRAL',
+      xm: toResonatorXM(level, energy),
+      version: Number(entry.version || 0)
+    };
+  });
+
+const buildModSnapshot = (source) =>
+  Array.from({ length: 4 }, (_, index) => {
+    const slot = index + 1;
+    const entry = readSnapshotSlot(source, slot);
+    if (!entry) return null;
+    const modType = String(entry.modType || entry.type || '').toUpperCase();
+    if (!modType) return null;
+    return {
+      slot,
+      type: modType.replace(/_/g, ' '),
+      subtype: formatModSubtype(modType),
+      rarity: entry.rarity || 'C',
+      owner: entry.playerId || entry.owner || ''
+    };
+  });
 
 export { levelColorClass };

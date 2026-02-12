@@ -1,6 +1,14 @@
 import React, { useCallback, useRef, useState } from 'react';
 
-export default function Modal({ open, onClose, className = '', placement = 'center', children }) {
+export default function Modal({
+  open,
+  onClose,
+  className = '',
+  placement = 'center',
+  nonBlocking = false,
+  closeOnBackdrop = true,
+  children
+}) {
   const cardRef = useRef(null);
   const dragState = useRef({ dragging: false, startX: 0, startY: 0, originX: 0, originY: 0 });
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -43,10 +51,10 @@ export default function Modal({ open, onClose, className = '', placement = 'cent
 
   return (
     <section
-      className="modal is-open"
+      className={`modal is-open ${nonBlocking ? 'non-blocking' : ''}`}
       aria-hidden={open ? 'false' : 'true'}
       onClick={(event) => {
-        if (event.target === event.currentTarget) {
+        if (closeOnBackdrop && event.target === event.currentTarget) {
           onClose?.();
         }
       }}

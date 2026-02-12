@@ -106,6 +106,7 @@ export function createWsClient({
     if (message?.id && pendingById.has(message.id)) {
       if (message.type === 'ERROR') {
         resolvePending(message.id, message, true);
+        return;
       } else {
         resolvePending(message.id, message, false);
       }
