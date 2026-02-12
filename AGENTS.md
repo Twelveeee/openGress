@@ -1,54 +1,85 @@
 # Repository Guidelines
 
 ## Project Status
-Backend code is implemented in `backend/` (Go). `WIKI/` is still the source of game rules and API specs, and the workflow remains doc-first. Frontend is still a placeholder and may be incomplete.
+Backend code is implemented in `backend/` (Go). `WIKI/` remains the source of game rules and API specs, and the workflow remains doc-first. Frontend is under active parallel development.
 
 ## Project Structure & Module Organization
 - `WIKI/`: 游戏机制与技术规格（items, portals, players, tech design）。
 - `README.md`: 高层设计与部署流程。
-- `CLAUDE.md`: 代理指导与未来 monorepo 规划。
+- `WIKI/tech-design.md`: 代理指导与未来
 - `backend/cmd/server`: 后端主服务入口。
 - `backend/cmd/cli`: 管理 CLI（导入导出/公告等）。
 - `backend/pkg/app`: 应用装配与生命周期管理。
 - `backend/pkg/api`: HTTP API（Gin）与 Auth。
-- `backend/pkg/ws`: WebSocket 协议、Hub、移动、战斗、连线、Field。
+- `backend/pkg/ws`: WebSocket 传输层（连接、编解码、路由、推送、tick 调度）。
+  - `protocol.go` / `types_aliases.go`: 协议消息与 payload 别名入口。
+  - `router_*.go`: 各 WS 指令路由处理（仅参数解析与调用 service）。
+  - `broadcasts.go`: Portal/Link/Field 拓扑广播拼装。
+  - `hub.go`: tick 调度与连接生命周期管理。
+- `backend/pkg/pb/ws`: WebSocket 消息类型与 payload 定义（为后续 proto 化预留）。
+- `backend/pkg/service`: 游戏业务层（player/mapsvc/portal/hack/link/field/combat/common/errors）。
 - `backend/pkg/state`: 领域模型与内存仓库。
 - `backend/pkg/database`: GORM/Postgres 接入。
 - `backend/pkg/config`: 配置加载与环境变量覆盖。
 - `backend/pkg/logging`: 日志字段定义。
-- `frontend/`: 前端占位目录。
+- `backend/pkg/gameplay`: 等级/XM/出生点等规则计算。
+- `backend/pkg/geo`: API/WS 共享几何与可见性计算。
+- `frontend/`: 前端应用目录。
+  - `frontend/src/components/NotifyLayer.jsx`: 右上角物品获取通知 + 顶部 AP 通知层。
 - `shared/`: 规划中的共享类型目录。
 
 ## Backend Architecture (Current)
-后端运行时由 HTTP 与 WS 两条链路组成，核心状态在内存 `GameState` 中维护。
+后端运行时由 HTTP 与 WS 两条链路组成，核心状态在内存 `GameState` 中维护；WS 业务逻辑统一下沉到 `pkg/service`。
 
 主要组件
 - `HTTPServer`（`backend/pkg/api/http.go`）：HTTP API 路由，使用 Gin。
-- `AuthStore`（`backend/pkg/api/auth.go`）：JWT 签发与校验，refresh 仍为内存 token。
-- `WSServer`/`Hub`（`backend/pkg/ws/server.go`、`backend/pkg/ws/hub.go`）：连接管理、tick、消息路由。
+- `AuthStore`（`backend/pkg/api/auth.go`）：JWT 签发与校验，用户名大小写不敏感唯一（`auth_users` 持久化），refresh 仍为内存 token。
+- `WSServer`/`Hub`（`backend/pkg/ws/server.go`、`backend/pkg/ws/hub.go`）：连接管理、tick 调度、消息路由与广播。
+- `WS Type Aliases`（`backend/pkg/ws/types_aliases.go`）：WS 传输层对 `pkg/pb/ws` 的类型别名聚合。
+- `WS Broadcasts`（`backend/pkg/ws/broadcasts.go`）：拓扑变化广播与视野增量发送。
+- `Service Container`（`backend/pkg/service/container.go`）：组装 player/mapsvc/portal/hack/link/field/combat 服务。
+- `WS PB`（`backend/pkg/pb/ws/types.go`）：统一 WS 协议结构定义。
 - `GameState`（`backend/pkg/state/state.go`）：玩家、Portal、Link、Field 的内存仓库聚合。
+- `PersistenceManager`（`backend/pkg/app/persistence.go`）+ `DeltaWriter`（`backend/pkg/database/delta_writer.go`）：`chan(cap=1)` latest-wins 异步持久化与增量落库。
 
 关键流程
 - HTTP 注册/登录签发 JWT，WS `CONNECT` 必须携带 `authToken` 且以 JWT `sub` 作为 `playerId`。
-- Hub 以 `movementTick` 推进移动，以 `mapTickInterval` 向视野内发送 `MAP_TICK`。
+- WS `CONNECT` 成功后立即下发一次 `PLAYER_STATE`（首帧权威位置），之后再按 tick 节奏持续推送。
+- Hub 以 `movementTick`/`mapTickInterval` 调度，并调用 `pkg/service` 计算业务结果后推送。
 - 视野上报后仅推送视野内 Portal/Link/Field 更新。
-- Link 创建触发 Field 计算与可见广播，攻击执行 Resonator 级 AoE 并批量 `MAP_UPDATE`。
+- Link 创建触发 Field 计算与可见广播，攻击执行 Resonator 级 AoE 并触发拓扑清理与批量 `MAP_UPDATE`。
+- `PLAYER_DEPLOY_RESONATOR` 成功后：先向请求方发送 `PLAYER_RESOURCE_UPDATE`（`apGained/xmDelta/inventoryDelta`），再广播 `PORTAL_UPDATE`（地图态，不含私有资源）。
+- `AUTO_HACK_RESULT` 仅用于前端物品/AP 通知，不写入前端 `Global Log`。
+- 持久化启动阶段会从 DB 加载快照，运行期按增量 upsert/delete 异步写入 DB，关机执行 best-effort flush。
+
+资源同步与协议护栏（新增，后续实现必须遵守）
+- AP 飘字单一来源：前端仅从 `PLAYER_RESOURCE_UPDATE`（以及 `HACK_RESULT/AUTO_HACK_RESULT`）读取 `apGained`，不要再依赖 `PORTAL_UPDATE.apGained`，避免重复提示。
+- `PORTAL_UPDATE` 只承载地图增量（portal/slot/mod/energy/version），不承载玩家私有背包或 XM/AP 数据。
+- `POST /api/v1/inventory/use` 保持轻量回包：仅返回 `apGained`、`xmDelta`，不要返回全量 `inventory/player`。
+- Mod 类型兼容：后端需接受并归一化别名（如 `PORTAL_SHIELD -> SHIELD`、`HEATSINK -> HEAT_SINK`），避免“insufficient mod”误报。
+- 前端权威拉取时机：仅在打开库存/Deploy/Mod/Attack/Portal 等相关弹窗时拉取 `me + inventory`，动作成功后优先消费增量消息，不做每次补拉。
 
 状态模型要点
 - `Player`: 位置、目标点、视野、背包、自动 hack。
 - `Portal`: Faction、Level、Energy、Resonators、Mods。
 - `Link`/`Field`: 带端点坐标与创建时间。
+- 玩家库存已从 `players.inventory_json` 拆分到 `player_inventories` 表（兼容读取旧列）。
+- `InMemoryPlayerRepo`/`InMemoryPortalRepo` 在 `Get/List/Upsert` 均执行深拷贝，避免 map/slice/pointer 别名导致并发读写 panic。
 
 ## Build, Test, and Development Commands
 - `cd backend && go run ./cmd/server` — 启动后端服务（HTTP + WS）。
 - `cd backend && go run ./cmd/cli` — 运行管理 CLI。
 - `cd backend && go test ./pkg/ws ./pkg/api` — 运行后端核心测试。
+- `cd backend && go test ./pkg/service/...` — 运行业务层 service 测试。
+- `cd backend && go test ./...` — 运行后端全量测试。
 - `cd backend && go build ./cmd/server` — 编译后端。
 - `cd frontend && npm run dev` — 前端开发服务（如已就绪）。
 - `wrangler pages deploy ../frontend/dist` — 前端部署到 Cloudflare Pages。
 
 ## Documentation-First Rule
 - 每新增或修改接口，必须同步更新 `WIKI/api.md` 并补充对应测试用例。
+- 涉及 WS 协议字段（如 `PLAYER_RESOURCE_UPDATE.apGained/xmDelta/inventoryDelta`）变更时，需同时更新 `backend/pkg/ws/router_test.go` 与 `WIKI/api.md` 示例。
+- 方法尽量写中文注释
 
 ## Coding Style & Naming Conventions
 No linters or formatters are configured yet. When adding code, follow standard language defaults (e.g., Go formatting and idiomatic names) and document any new lint/format tools in `README.md` and this file.
@@ -62,7 +93,7 @@ No linters or formatters are configured yet. When adding code, follow standard l
 There is no Git history yet, so no established commit convention. Use a concise, imperative subject line (e.g., “Add portal link rules”). For PRs, include a brief summary, the relevant `WIKI/` or `README.md` references, and any diagrams or tables you changed.
 
 ## Agent-Specific Notes
-实现功能前，先对齐 `CLAUDE.md` 与 `WIKI/tech-design.md`。涉及协议/规则变更时必须同步更新 `WIKI/api.md`。
+实现功能前，先对齐本文件与 `WIKI/tech-design.md`。涉及协议/规则变更时必须同步更新 `WIKI/api.md`。
 
 
 # AGENTS 全局配置

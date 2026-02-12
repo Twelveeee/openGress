@@ -113,6 +113,8 @@ WS 错误示例：
 ```json
 {
   "id": "portal-uuid",
+  "title": "Portal Name",
+  "cover_url": "https://example.com/portal-cover.jpg",
   "position": {"latitude": 39.91, "longitude": 116.38},
   "faction": "RESISTANCE",
   "level": 3,
@@ -169,6 +171,7 @@ WS 错误示例：
   - `version`（可选）
 - 响应/推送：
   - 成功：`CONNECTED`
+  - 成功后立即推送：`PLAYER_STATE`（首帧权威位置）
   - 失败：`ERROR`
 
 请求 Demo：
@@ -195,6 +198,27 @@ WS 错误示例：
   "data": {
     "sessionId": "session-uuid",
     "serverTime": 1706500801123
+  }
+}
+```
+
+首帧位置推送 Demo：
+
+```json
+{
+  "type": "PLAYER_STATE",
+  "timestamp": 1706500801124,
+  "id": "",
+  "data": {
+    "playerId": "player-uuid",
+    "latitude": 39.9123,
+    "longitude": 116.3812,
+    "renderLatitude": 39.9123,
+    "renderLongitude": 116.3812,
+    "preRenderLatitude": 39.9123,
+    "preRenderLongitude": 116.3812,
+    "speedMps": 0,
+    "headingDeg": 0
   }
 }
 ```
@@ -301,6 +325,8 @@ WS 错误示例：
     "portals": [
       {
         "id": "portal-uuid",
+        "title": "Portal Name",
+        "cover_url": "https://example.com/portal-cover.jpg",
         "latitude": 39.91,
         "longitude": 116.38,
         "faction": "RESISTANCE",
@@ -318,8 +344,12 @@ WS 错误示例：
 - 状态：已实现
 - 字段：
   - `playerId`
-  - `latitude`
-  - `longitude`
+  - `latitude`（玩家服务端权威坐标，兼容旧字段）
+  - `longitude`（玩家服务端权威坐标，兼容旧字段）
+  - `renderLatitude`（前端渲染坐标，当前与 `latitude` 一致）
+  - `renderLongitude`（前端渲染坐标，当前与 `longitude` 一致）
+  - `preRenderLatitude`（后端预测的预渲染坐标）
+  - `preRenderLongitude`（后端预测的预渲染坐标）
   - `speedMps`
   - `headingDeg`
 
@@ -334,18 +364,51 @@ WS 错误示例：
     "playerId": "player-uuid",
     "latitude": 39.9123,
     "longitude": 116.3812,
+    "renderLatitude": 39.9123,
+    "renderLongitude": 116.3812,
+    "preRenderLatitude": 39.9123,
+    "preRenderLongitude": 116.3815,
     "speedMps": 33.3,
     "headingDeg": 90.0
   }
 }
 ```
 
-### 2.6 NEARBY_PLAYERS
+### 2.6 PLAYER_RESOURCE_UPDATE
+
+- 方向：Server → Client（仅请求方）
+- 状态：已实现
+- 用途：返回玩家资源增量（AP/XM/背包变化），避免传输大体积全量背包。
+- 字段：
+  - `playerId`
+  - `apGained`（可选，本次新增 AP）
+  - `xmDelta`（可选，本次 XM 变化，正数=增加，负数=消耗）
+  - `inventoryDelta`（可选，`{ itemType: delta }`，负数表示消耗）
+
+推送 Demo：
+
+```json
+{
+  "type": "PLAYER_RESOURCE_UPDATE",
+  "timestamp": 1706500801123,
+  "id": "msg-uuid",
+  "data": {
+    "playerId": "player-uuid",
+    "apGained": 625,
+    "xmDelta": -300,
+    "inventoryDelta": {
+      "RESO_L3": -1
+    }
+  }
+}
+```
+
+### 2.7 NEARBY_PLAYERS
 
 - 方向：Server → Client
 - 状态：已实现
 - 字段：
-  - `players[]`: `id`, `latitude`, `longitude`
+  - `players[]`: `id`, `latitude`, `longitude`, `renderLatitude`, `renderLongitude`, `preRenderLatitude`, `preRenderLongitude`
 - 距离阈值：与视野半径一致（默认 400m）
 
 推送 Demo：
@@ -357,17 +420,28 @@ WS 错误示例：
   "id": "",
   "data": {
     "players": [
-      {"id": "player-1", "latitude": 39.91, "longitude": 116.38}
+      {
+        "id": "player-1",
+        "latitude": 39.91,
+        "longitude": 116.38,
+        "renderLatitude": 39.91,
+        "renderLongitude": 116.38,
+        "preRenderLatitude": 39.9101,
+        "preRenderLongitude": 116.381
+      }
     ]
   }
 }
 ```
 
-### 2.7 PORTAL_UPDATE
+### 2.8 PORTAL_UPDATE
 
 - 方向：Server → Client
 - 状态：已实现
 - 用途：部署/充能/Mod/战斗后的增量更新
+- 兼容说明：
+  - 旧增量字段继续保留（`slot/modSlot/portalLevel/...`）
+  - 战斗广播场景会携带可选全量快照：`resonators`、`mods`、`owner`
 
 Deploy Resonator Demo：
 
@@ -375,12 +449,14 @@ Deploy Resonator Demo：
 {
   "type": "PORTAL_UPDATE",
   "timestamp": 1706500801123,
-  "id": "msg-uuid",
+  "id": "",
   "data": {
     "portalId": "portal-uuid",
+    "playerId": "player-uuid",
     "slot": 1,
     "level": 3,
     "energy": 4500,
+    "slotEnergy": 6000,
     "faction": "RESISTANCE",
     "portalLevel": 3,
     "version": 2
@@ -397,6 +473,7 @@ Deploy Mod Demo：
   "id": "msg-uuid",
   "data": {
     "portalId": "portal-uuid",
+    "playerId": "player-uuid",
     "modSlot": 1,
     "modType": "LINK_AMP",
     "rarity": "RARE",
@@ -419,14 +496,38 @@ Charge Portal Demo：
 }
 ```
 
-### 2.8 MAP_UPDATE / MAP_TICK
+Combat Snapshot Demo：
+
+```json
+{
+  "type": "PORTAL_UPDATE",
+  "timestamp": 1706500801123,
+  "id": "",
+  "data": {
+    "portalId": "portal-uuid",
+    "faction": "ENLIGHTENED",
+    "energy": 4200,
+    "level": 4,
+    "owner": "player-defender",
+    "resonators": {
+      "1": { "slot": 1, "level": 8, "energy": 5600, "playerId": "player-defender", "version": 7 }
+    },
+    "mods": {
+      "1": { "slot": 1, "modType": "SHIELD", "rarity": "RARE", "playerId": "player-defender", "version": 3 }
+    }
+  }
+}
+```
+
+### 2.9 MAP_UPDATE / MAP_TICK
 
 - 方向：Server → Client
 - 状态：已实现
 - 字段：
   - `full`（MAP_UPDATE=true, MAP_TICK=false）
   - `batchIndex`, `batchTotal`
-  - `portals[]`: `id`, `latitude`, `longitude`, `faction`, `level`, `energy`
+  - `portals[]`: `id`, `title`, `cover_url`, `latitude`, `longitude`, `faction`, `level`, `energy`
+  - 说明：`MAP_UPDATE/MAP_TICK` 为地图轻量数据，不包含 `resonators/mods` 等详情字段
 
 MAP_TICK Demo：
 
@@ -444,18 +545,20 @@ MAP_TICK Demo：
 }
 ```
 
-### 2.9 PLAYER_DEPLOY_RESONATOR
+### 2.10 PLAYER_DEPLOY_RESONATOR
 
 - 方向：Client → Server
-- 状态：已实现（校验库存/距离为规划）
+- 状态：已实现
 - 请求字段：
   - `portalId`（必填）
   - `slot`（1-8）
   - `level`（1-8）
   - `expectedVersion`（乐观锁）
 - 响应/推送：
-  - 成功：`PORTAL_UPDATE`
+  - 成功（请求方）：`PLAYER_RESOURCE_UPDATE`
+  - 成功（全体广播）：`PORTAL_UPDATE`
   - 冲突：`ERROR`（ErrCodeConflict）
+  - 说明：部署/升级谐振器产生 AP 奖励时，会在 `PLAYER_RESOURCE_UPDATE.data.apGained` 返回本次 AP 增量
 
 请求 Demo：
 
@@ -473,17 +576,20 @@ MAP_TICK Demo：
 }
 ```
 
-### 2.10 PLAYER_DEPLOY_MOD
+### 2.11 PLAYER_DEPLOY_MOD
 
 - 方向：Client → Server
-- 状态：已实现（校验库存/距离为规划）
+- 状态：已实现
 - 请求字段：
   - `portalId`
   - `slot`（1-4）
   - `modType`
   - `rarity`
   - `expectedVersion`
-- 响应/推送：`PORTAL_UPDATE`
+- 响应/推送：
+  - 成功（请求方）：`PLAYER_RESOURCE_UPDATE`（含 `apGained/xmDelta/inventoryDelta`）
+  - 成功（全体广播）：`PORTAL_UPDATE`
+  - 冲突：`ERROR`（ErrCodeConflict）
 
 请求 Demo：
 
@@ -502,14 +608,20 @@ MAP_TICK Demo：
 }
 ```
 
-### 2.11 PLAYER_CHARGE_PORTAL
+### 2.12 PLAYER_CHARGE_PORTAL
 
 - 方向：Client → Server
-- 状态：已实现（XM 消耗规则为规划）
+- 状态：已实现
 - 请求字段：
   - `portalId`
   - `amount`
-- 响应/推送：`PORTAL_UPDATE`
+- 响应/推送：
+  - 成功（请求方）：`PLAYER_RESOURCE_UPDATE`（`xmDelta` 为本次实际扣费的负数）
+  - 成功（全体广播）：`PORTAL_UPDATE`
+  - 失败：`ERROR`
+- 规则说明：
+  - 扣费按本次**实际充入量**计算（不是固定按请求 `amount`）。
+  - 若 Portal 已满电，走成功 no-op：`xmDelta=0`，Portal 能量不变。
 
 请求 Demo：
 
@@ -525,7 +637,7 @@ MAP_TICK Demo：
 }
 ```
 
-### 2.12 PLAYER_CREATE_LINK
+### 2.13 PLAYER_CREATE_LINK
 
 - 方向：Client → Server
 - 状态：已实现
@@ -550,7 +662,7 @@ MAP_TICK Demo：
 }
 ```
 
-### 2.13 LINK_UPDATE
+### 2.14 LINK_UPDATE
 
 - 方向：Server → Client
 - 状态：已实现
@@ -558,6 +670,7 @@ MAP_TICK Demo：
   - `linkId`
   - `fromPortalId`, `toPortalId`
   - `fromLat`, `fromLon`, `toLat`, `toLon`
+  - `removed`（可选，true 表示连线被移除）
 
 推送 Demo：
 
@@ -578,7 +691,27 @@ MAP_TICK Demo：
 }
 ```
 
-### 2.14 FIELD_CREATED
+移除 Demo：
+
+```json
+{
+  "type": "LINK_UPDATE",
+  "timestamp": 1706500802123,
+  "id": "",
+  "data": {
+    "linkId": "link-uuid",
+    "fromPortalId": "portal-a",
+    "toPortalId": "portal-b",
+    "fromLat": 39.91,
+    "fromLon": 116.38,
+    "toLat": 39.92,
+    "toLon": 116.39,
+    "removed": true
+  }
+}
+```
+
+### 2.15 FIELD_CREATED
 
 - 方向：Server → Client
 - 状态：已实现
@@ -588,6 +721,7 @@ MAP_TICK Demo：
   - `mu`
   - `layer`
   - `faction`
+  - `removed`（可选，true 表示 Field 被移除）
 
 推送 Demo：
 
@@ -606,15 +740,35 @@ MAP_TICK Demo：
 }
 ```
 
-### 2.15 PLAYER_ATTACK
+移除 Demo：
+
+```json
+{
+  "type": "FIELD_CREATED",
+  "timestamp": 1706500802123,
+  "id": "",
+  "data": {
+    "fieldId": "field-uuid",
+    "portalIds": ["portal-a", "portal-b", "portal-c"],
+    "mu": 1200,
+    "layer": 1,
+    "faction": "RESISTANCE",
+    "removed": true
+  }
+}
+```
+
+### 2.16 PLAYER_ATTACK
 
 - 方向：Client → Server
 - 状态：已实现
 - 请求字段：
-  - `portalId`
+  - `portalId`（可选，允许空字符串；用于日志/目标提示）
   - `weaponType`（XMP / US）
   - `weaponLevel`（1-8）
+  - `chargeBonus`（可选，0.0~0.2，超出范围服务端会 clamp）
 - 响应/推送：
+  - `PLAYER_RESOURCE_UPDATE`（攻击武器消耗、XM 变化、反击伤害、AP 增量）
   - `ATTACK_RESULT`
   - `MAP_UPDATE`（多 Portal 受影响）或 `PORTAL_UPDATE`
 
@@ -628,22 +782,30 @@ MAP_TICK Demo：
   "data": {
     "portalId": "portal-uuid",
     "weaponType": "XMP",
-    "weaponLevel": 4
+    "weaponLevel": 4,
+    "chargeBonus": 0.2
   }
 }
 ```
 
-### 2.16 ATTACK_RESULT
+### 2.17 ATTACK_RESULT
 
 - 方向：Server → Client
 - 状态：已实现
 - 字段：
   - `portalId`
   - `weaponType`, `weaponLevel`
+  - `chargeBonus`（可选，实际生效值）
   - `damage`
   - `resonatorsDestroyed`
   - `portalEnergy`
   - `portalNeutral`
+  - `mitigationApplied`（可选，0.0~1.0）
+  - `modsDestroyed[]`（可选，`portalId/slot/modType/rarity`）
+  - `counterattackTriggered`（可选）
+  - `counterattackDamage`（可选）
+  - `counterattacks[]`（可选，按命中 Portal 返回；`portalId/triggered/damage/critical`）
+  - `portalDamages[]`（可选，`portalId/damage/resonatorsDestroyed/portalNeutral`）
   - `itemsDropped[]`（可选）
 
 推送 Demo：
@@ -657,16 +819,44 @@ MAP_TICK Demo：
     "portalId": "portal-uuid",
     "weaponType": "XMP",
     "weaponLevel": 4,
+    "chargeBonus": 0.2,
     "damage": 1200,
     "resonatorsDestroyed": 2,
     "portalEnergy": 3000,
     "portalNeutral": false,
+    "mitigationApplied": 0.32,
+    "modsDestroyed": [
+      {
+        "portalId": "portal-uuid",
+        "slot": 2,
+        "modType": "SHIELD",
+        "rarity": "RARE"
+      }
+    ],
+    "counterattackTriggered": true,
+    "counterattackDamage": 500,
+    "counterattacks": [
+      {
+        "portalId": "portal-uuid",
+        "triggered": true,
+        "damage": 500,
+        "critical": false
+      }
+    ],
+    "portalDamages": [
+      {
+        "portalId": "portal-uuid",
+        "damage": 1200,
+        "resonatorsDestroyed": 2,
+        "portalNeutral": false
+      }
+    ],
     "itemsDropped": ["KEY:portal-uuid"]
   }
 }
 ```
 
-### 2.17 PLAYER_TOGGLE_AUTO_HACK
+### 2.18 PLAYER_TOGGLE_AUTO_HACK
 
 - 方向：Client → Server
 - 状态：已实现
@@ -689,13 +879,15 @@ MAP_TICK Demo：
 }
 ```
 
-### 2.18 AUTO_HACK_RESULT
+### 2.19 AUTO_HACK_RESULT
 
 - 方向：Server → Client
 - 状态：已实现
 - 字段：
   - `portalId`
   - `success`
+  - `itemsGained[]`（可选）
+  - `apGained`（可选）
   - `cooldownSeconds`
 
 推送 Demo：
@@ -708,12 +900,14 @@ MAP_TICK Demo：
   "data": {
     "portalId": "portal-uuid",
     "success": true,
+    "itemsGained": ["XMP_L3", "RESO_L3", "KEY:portal-uuid"],
+    "apGained": 50,
     "cooldownSeconds": 300
   }
 }
 ```
 
-### 2.19 PING / PONG
+### 2.20 PING / PONG
 
 - 方向：双向
 - 状态：已实现
@@ -737,6 +931,76 @@ PONG Demo：
   "timestamp": 1706500801123,
   "id": "msg-uuid",
   "data": {}
+}
+```
+
+### 2.21 HACK_PORTAL
+
+- 方向：Client → Server
+- 状态：已实现
+- 请求字段：
+  - `portalId`（必填）
+  - `playerId`（可选）
+  - `hackType`（可选，MVP 预留）
+- 响应/推送：
+  - 成功：`HACK_RESULT`
+  - 冷却中：`HACK_RESULT(success=false)`
+  - 当前库存已超上限：`ERROR(code=400, message="inventory capacity exceeded")`
+
+请求 Demo：
+
+```json
+{
+  "type": "HACK_PORTAL",
+  "timestamp": 1706500800123,
+  "id": "msg-uuid",
+  "data": {
+    "portalId": "portal-uuid",
+    "hackType": "NORMAL"
+  }
+}
+```
+
+### 2.22 HACK_RESULT
+
+- 方向：Server → Client
+- 状态：已实现
+- 字段：
+  - `portalId`
+  - `success`
+  - `itemsGained[]`（可选）
+  - `apGained`（可选）
+  - `cooldownSeconds`
+
+推送 Demo（成功）：
+
+```json
+{
+  "type": "HACK_RESULT",
+  "timestamp": 1706500801123,
+  "id": "msg-uuid",
+  "data": {
+    "portalId": "portal-uuid",
+    "success": true,
+    "itemsGained": ["XMP_L3", "US_L3", "MOD:HEAT_SINK:COMMON", "KEY:portal-uuid"],
+    "apGained": 50,
+    "cooldownSeconds": 300
+  }
+}
+```
+
+推送 Demo（冷却中）：
+
+```json
+{
+  "type": "HACK_RESULT",
+  "timestamp": 1706500802123,
+  "id": "msg-uuid",
+  "data": {
+    "portalId": "portal-uuid",
+    "success": false,
+    "cooldownSeconds": 178
+  }
 }
 ```
 
@@ -885,7 +1149,7 @@ Base Path：`/api/v1`
   "errno": 0,
   "errmsg": "success",
   "data": {
-    "portals": [{"id": "portal-uuid", "position": {"latitude": 39.91, "longitude": 116.38}, "faction": "RESISTANCE", "level": 3, "energy": 4500, "resonators": {}, "mods": {}, "updatedAt": "2026-02-03T10:00:00Z"}],
+    "portals": [{"id": "portal-uuid", "title": "Portal Name", "cover_url": "https://example.com/portal-cover.jpg", "position": {"latitude": 39.91, "longitude": 116.38}, "faction": "RESISTANCE", "level": 3, "energy": 4500, "resonators": {}, "mods": {}, "updatedAt": "2026-02-03T10:00:00Z"}],
     "links": [{"id": "link-uuid", "fromPortalId": "portal-a", "toPortalId": "portal-b", "fromPosition": {"latitude": 39.91, "longitude": 116.38}, "toPosition": {"latitude": 39.92, "longitude": 116.39}, "createdAt": "2026-02-03T10:00:00Z"}],
     "fields": [{"id": "field-uuid", "portalIds": ["portal-a", "portal-b", "portal-c"], "faction": "RESISTANCE", "mu": 1200, "layer": 1, "createdAt": "2026-02-03T10:00:00Z"}]
   }
@@ -946,7 +1210,22 @@ Legacy 响应 Demo：
 
 - Auth：需要
 - Request：`itemType`、`amount`
-- Response data：更新后的库存
+- Response data：
+  - `apGained`：本次新增 AP（当前 `CUBE` 为 `0`）
+  - `xmDelta`：本次 XM 变化（正数=恢复，负数=消耗）
+
+响应 Demo：
+
+```json
+{
+  "errno": 0,
+  "errmsg": "success",
+  "data": {
+    "apGained": 0,
+    "xmDelta": 1000
+  }
+}
+```
 
 #### POST /api/v1/inventory/recycle
 
@@ -989,7 +1268,45 @@ Legacy 响应 Demo：
 #### GET /api/v1/config
 
 - Auth：无需
-- Response data：`{ viewRadiusMeters, mapTickMs }`
+- Response data：`{ viewRadiusMeters, mapTickMs, wsCadence, attackSpecs }`
+  - `mapTickMs`：保留的兼容字段（等同于 `wsCadence.mapTickMs`）
+  - `attackSpecs`（可选）：攻击参数下发（用于前端蓄力/XM 校验/半径展示）
+    - `attackSpecs.XMP|US.<level>.radiusM`
+    - `attackSpecs.XMP|US.<level>.costXm`
+  - `wsCadence`：
+    - `movementTickMs`
+    - `mapTickMs`
+    - `playerStatePushMs`
+    - `nearbyPlayersPushMs`
+
+响应 Demo：
+
+```json
+{
+  "errno": 0,
+  "errmsg": "success",
+  "data": {
+    "viewRadiusMeters": 400,
+    "mapTickMs": 1000,
+    "attackSpecs": {
+      "XMP": {
+        "1": { "radiusM": 42, "costXm": 50 },
+        "2": { "radiusM": 48, "costXm": 100 }
+      },
+      "US": {
+        "1": { "radiusM": 10, "costXm": 50 },
+        "2": { "radiusM": 13, "costXm": 100 }
+      }
+    },
+    "wsCadence": {
+      "movementTickMs": 100,
+      "mapTickMs": 1000,
+      "playerStatePushMs": 300,
+      "nearbyPlayersPushMs": 600
+    }
+  }
+}
+```
 
 ---
 
@@ -1217,7 +1534,7 @@ Legacy 响应 Demo：
 
 #### POST /api/v1/admin/portals
 
-- Request：`id`、`lat`、`lon`、`faction`(可选)
+- Request：`id`、`title`(可选)、`cover_url`(可选)、`lat`、`lon`、`faction`(可选)
 - Response data：`Portal`
 
 请求 Demo：
@@ -1225,6 +1542,8 @@ Legacy 响应 Demo：
 ```json
 {
   "id": "portal-uuid",
+  "title": "Portal Name",
+  "cover_url": "https://example.com/portal-cover.jpg",
   "lat": 39.91,
   "lon": 116.38,
   "faction": "NEUTRAL"
@@ -1239,6 +1558,8 @@ Legacy 响应 Demo：
   "errmsg": "success",
   "data": {
     "id": "portal-uuid",
+    "title": "Portal Name",
+    "cover_url": "https://example.com/portal-cover.jpg",
     "position": {"latitude": 39.91, "longitude": 116.38},
     "faction": "NEUTRAL",
     "level": 0,
@@ -1252,13 +1573,14 @@ Legacy 响应 Demo：
 
 #### PATCH /api/v1/admin/portals/:id
 
-- Request：`lat`、`lon`、`faction`、`level`、`energy`（可选）
+- Request：`lat`、`lon`、`title`、`cover_url`、`faction`、`level`、`energy`（可选）
 - Response data：`Portal`
 
 请求 Demo：
 
 ```json
 {
+  "title": "Portal Name V2",
   "faction": "RESISTANCE",
   "level": 3
 }
@@ -1272,6 +1594,8 @@ Legacy 响应 Demo：
   "errmsg": "success",
   "data": {
     "id": "portal-uuid",
+    "title": "Portal Name V2",
+    "cover_url": "https://example.com/portal-cover.jpg",
     "position": {"latitude": 39.91, "longitude": 116.38},
     "faction": "RESISTANCE",
     "level": 3,
@@ -1470,19 +1794,34 @@ Legacy 响应 Demo：
 - 容量规则：Key 槽优先占用，Key 满后占 General 槽（容量按 `WIKI/player.md`）。
 
 **XM 消耗（配置化）**：
-- `deploy_resonator_cost = deploy_resonator_base + deploy_resonator_per_level * (level-1)`
-- `attack_xmp_cost = attack_xmp_base + attack_xmp_per_level * (level-1)`
-- `attack_us_cost = attack_us_base + attack_us_per_level * (level-1)`
-- `deploy_mod_cost = deploy_mod_flat`
-- `link_cost = link_flat`
+- `deploy_resonator_cost = deploy_resonator_base + deploy_resonator_per_level * (level-1)`（默认 `50 * level`）
+- `attack_xmp_cost = attack_xmp_base + attack_xmp_per_level * (level-1)`（默认 `50 * level`）
+- `attack_us_cost = attack_us_base + attack_us_per_level * (level-1)`（默认 `50 * level`）
+- `deploy_mod_cost` 优先级：
+  - `deploy_mod_by_type[modType]`
+  - `deploy_mod_by_rarity[rarity]`
+  - `deploy_mod_flat`（legacy fallback）
+- `link_cost = link_flat`（默认 `250`）
 - `charge_cost = amount * charge_per_xm`
 
+**AP 奖励（配置化）**：
+- `capture_portal = 500`
+- `deploy_resonator = 125`
+- `upgrade_resonator = 65`
+- `deploy_mod = 150`
+- `destroy_resonator = 75`（按摧毁数量线性累计）
+- `create_link = 313`
+- `create_field = 1250`
+- `hack_portal = 50`
+
 **MVP 开发补充规则（2026-02-06）**：
-- Hack 统一规则：手动 `HACK_PORTAL/HACK_RESULT` 与自动 `AUTO_HACK_RESULT` 使用同一套距离、冷却、掉落、容量校验与 AP 奖励逻辑。
-- 掉落/发放容量校验：所有新增物品路径（Hack、攻击掉落、管理发放）必须统一经过容量与 Key 上限校验（`CanAddItem/CanAddKey` 语义）。
-- Portal 中立清理：当 Portal 能量归零且变为 `NEUTRAL` 时，必须清理相关 `Links/Fields`，并通过 `MAP_UPDATE`/`LINK_UPDATE`/`FIELD_CREATED` 的反向更新及时广播可见玩家。
-- 等级与属性同步：玩家 AP 变化后需立即重算等级（`AP -> Level`），并同步 `MaxXM` 与背包容量上限；所有等级限制操作按最新等级校验。
-- Link 距离计算：Link 最大距离按 8 个 Resonator 组合与 Link Amp/SBUL 倍率计算，不仅按 Portal 显示等级估算（对齐 `WIKI/portal.md`）。
+- Hack 统一规则（已实现）：手动 `HACK_PORTAL/HACK_RESULT` 与自动 `AUTO_HACK_RESULT` 使用同一套距离、冷却、掉落与 AP 奖励逻辑。
+- Hack 库存前置校验（已实现）：当玩家当前背包已超上限（strict `>`）时，手动 Hack 返回 `ERROR(400, inventory capacity exceeded)`；自动 Hack 静默跳过不推送结果。
+- Hack 掉落容量语义（已实现）：Hack 前检查“是否已超上限”；Hack 成功后的物品发放允许背包超过上限，Key 仍遵守每 Portal 上限 2 把。
+- Portal 中立清理（已实现）：当 Portal 能量归零且变为 `NEUTRAL` 时，会清理相关 `Links/Fields`，并通过 `MAP_UPDATE` + `LINK_UPDATE`/`FIELD_CREATED`（`removed=true`）反向更新广播可见玩家。
+- 等级与属性同步（已实现）：玩家 AP 变化后会重算等级（`AP -> Level`），并同步 `MaxXM` 与背包容量上限；等级限制操作按最新等级校验。
+- Link 距离计算（已实现）：Link 最大距离按 8 个 Resonator 组合与 Link Amp/SBUL 倍率计算，不仅按 Portal 显示等级估算（对齐 `WIKI/portal.md`）。
+- 新手起始物资（已实现）：注册/首次登录会默认发放 `RESO_L1`、`XMP_L1`、`CUBE_L1`。
 - 文档一致性：接口或规则实现状态变化时，必须同步更新本文件“状态说明”与对应条目状态（已实现/规划中/已废弃）。
 
 ---
