@@ -1,0 +1,185 @@
+# 服务监听与 WS 运行节奏配置。
+server:
+  # HTTP API 监听端口。
+  http_port: 8080
+  # WebSocket 服务监听端口。
+  ws_port: 8081
+  # WS 内部推送/计算周期（单位：毫秒）。
+  ws:
+    # 移动推进 tick（建议 >= 20ms）。
+    movement_tick_ms: 100
+    # 地图增量广播 tick（建议 >= 20ms）。
+    map_tick_ms: 2000
+    # 玩家状态推送间隔（单位：毫秒）。
+    player_state_push_ms: 500
+    # 附近玩家推送间隔（单位：毫秒）。
+    nearby_players_push_ms: 1000
+
+# PostgreSQL 连接参数（模板值，按环境替换）。
+database:
+  # 数据库主机地址。
+  host: 127.0.0.1
+  # 数据库端口。
+  port: 5432
+  # 数据库用户名。
+  user: opengress
+  # 示例密码，仅用于本地开发。
+  password: opengress
+  # 数据库名。
+  dbname: opengress
+  # 连接安全模式（本地常用 disable）。
+  sslmode: disable
+
+# 日志输出与轮转配置。
+log:
+  # 日志文件路径。
+  fileName: logs/opengress.log
+  # 轮转规则（示例：1hour）。
+  rotateRule: 1hour
+  # 最多保留文件数。
+  maxFileNum: 48
+  # 写缓冲区大小（字节）。
+  bufferSize: 4096
+  # 写超时（毫秒，0 表示使用默认策略）。
+  writerTimeout: 0
+  # 强制刷新周期（毫秒）。
+  flushDuration: 1000
+  # 日志级别：DEBUG/INFO/WARN/ERROR。
+  level: DEBUG
+
+# 鉴权配置。
+auth:
+  # JWT 签名密钥（示例值）。
+  jwt_secret: dev-secret
+  # access token 过期时间（单位：秒）。
+  access_ttl_seconds: 86400
+
+# 管理接口鉴权令牌（示例值）。
+admin:
+  token: dev-admin
+
+# 游戏规则与地图限制配置。
+gameplay:
+  # 玩家活动/出生边界（经纬度矩形范围）。
+  map_bounds:
+    min_lat: 39.7
+    max_lat: 40.1
+    min_lon: 115.7
+    max_lon: 117.0
+  # 视野半径上限（单位：米）。
+  view_radius_m: 400
+  # 与 Portal 交互距离（单位：米）。
+  interact_range_m: 40
+  # 全局日志容量（内存条目数）。
+  log_capacity: 200
+  # 各动作 XM 消耗参数。
+  xm_cost:
+    # 部署 Resonator：基础消耗。
+    deploy_resonator_base: 50
+    # 部署 Resonator：按级别附加消耗。
+    deploy_resonator_per_level: 50
+    # XMP 攻击：基础消耗。
+    attack_xmp_base: 50
+    # XMP 攻击：按级别附加消耗。
+    attack_xmp_per_level: 50
+    # Ultra Strike 攻击：基础消耗（历史字段，建议改用 gameplay.attack.weapon_specs[*].cost_xm）。
+    attack_us_base: 50
+    # Ultra Strike 攻击：按级别附加消耗（历史字段，建议改用 gameplay.attack.weapon_specs[*].cost_xm）。
+    attack_us_per_level: 50
+    # 部署 Mod：按稀有度映射。
+    deploy_mod_by_rarity:
+      COMMON: 400
+      RARE: 800
+      VERY_RARE: 1000
+    # 部署 Mod：按类型覆盖映射（优先级高于稀有度）。
+    deploy_mod_by_type:
+      FORCE_AMP: 800
+      TURRET: 800
+      LINK_AMP: 800
+      AEGIS_SHIELD: 1000
+      ITO_EN_TRANSMUTER_PLUS: 1000
+      ITO_EN_TRANSMUTER_MINUS: 1000
+    # 兼容字段：当 type/rarity 都未命中时回退。
+    deploy_mod_flat: 400
+    # 创建 Link：固定消耗。
+    link_flat: 250
+    # 充能每 1 XM 的消耗系数。
+    charge_per_xm: 1
+  # AP 奖励参数。
+  ap_reward:
+    capture_portal: 500
+    deploy_resonator: 125
+    upgrade_resonator: 65
+    deploy_mod: 150
+    destroy_resonator: 75
+    create_link: 313
+    create_field: 1250
+    hack_portal: 50
+  # 攻击系统参数（服务端权威结算）。
+  attack:
+    weapon_specs:
+      XMP:
+        1: { damage: 150, radius_m: 42, cost_xm: 50 }
+        2: { damage: 300, radius_m: 48, cost_xm: 100 }
+        3: { damage: 500, radius_m: 58, cost_xm: 150 }
+        4: { damage: 900, radius_m: 72, cost_xm: 200 }
+        5: { damage: 1200, radius_m: 90, cost_xm: 250 }
+        6: { damage: 1500, radius_m: 112, cost_xm: 300 }
+        7: { damage: 1800, radius_m: 138, cost_xm: 350 }
+        8: { damage: 2700, radius_m: 168, cost_xm: 400 }
+      US:
+        1: { damage: 300, radius_m: 10, cost_xm: 50 }
+        2: { damage: 600, radius_m: 13, cost_xm: 100 }
+        3: { damage: 1000, radius_m: 16, cost_xm: 150 }
+        4: { damage: 1800, radius_m: 18, cost_xm: 200 }
+        5: { damage: 2400, radius_m: 21, cost_xm: 250 }
+        6: { damage: 3000, radius_m: 24, cost_xm: 300 }
+        7: { damage: 3600, radius_m: 27, cost_xm: 350 }
+        8: { damage: 5400, radius_m: 30, cost_xm: 400 }
+    distance_falloff_tiers:
+      - { max_distance_ratio: 0.2, multiplier: 1.0 }
+      - { max_distance_ratio: 0.4, multiplier: 0.85 }
+      - { max_distance_ratio: 0.6, multiplier: 0.65 }
+      - { max_distance_ratio: 0.8, multiplier: 0.45 }
+      - { max_distance_ratio: 1.0, multiplier: 0.25 }
+    mitigation:
+      shield_values:
+        COMMON: 30
+        RARE: 40
+        VERY_RARE: 60
+        AEGIS: 70
+      link_scale: 44.4444444444
+      link_divisor: 2.7182818284
+      field_per_field: 0
+      max_percent: 95
+    crit:
+      xmp: { chance: 0.08, multiplier: 1.5 }
+      us: { chance: 0.35, multiplier: 1.8 }
+    counterattack:
+      base_trigger_chance: 0.15
+      max_trigger_chance: 0.95
+      turret_trigger_bonus: 0.25
+      base_crit_chance: 0.05
+      turret_crit_bonus: 0.2
+      crit_multiplier: 1.5
+      force_amp_base_bonus: 1.0
+      force_amp_extra_bonus: 0.25
+      damage_by_portal_level:
+        1: 75
+        2: 150
+        3: 300
+        4: 500
+        5: 750
+        6: 1125
+        7: 1625
+        8: 2500
+    mod_destroy:
+      enabled: true
+      roll_max_exclusive: 650000
+      stickiness:
+        COMMON: 0
+        RARE: 150000
+        VERY_RARE: 450000
+        AEGIS: 550000
+    destroy_resonator_ap: 75
+    key_drop_chance: 0.2
